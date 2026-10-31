@@ -1,0 +1,70 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 4.0,
+  "cost_usd": 0.000797,
+  "model_ms": 87.8,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.0042,
+  "ungrounded": 0.9958,
+  "verdict": "contradicted",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0,
+    "share_of_answer": 0.0025,
+    "claims": []
+   },
+   {
+    "id": "old",
+    "share": 0,
+    "share_of_answer": 0.0017,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "The total prize pool grew to $12,000.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 1,
+    "supported": 0.0042,
+    "contradicted": 0.9908,
+    "not_stated": 0.003,
+    "not_a_claim": 0.002,
+    "verdict": "contradicted",
+    "sources": {
+     "old": 0.3966,
+     "new": 0.6034
+    },
+    "source": null,
+    "evidence": {
+     "document": "old",
+     "quote": "The total prize pool is $10,000.",
+     "start": 807,
+     "end": 839,
+     "confidence": 0.854
+    }
+   }
+  ],
+  "unsupported_claims": [
+   0
+  ],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 0,
+   "supported": 0.0042
+  },
+  "timing": {
+   "read_ms": 196,
+   "total_ms": 198
+  }
+ }
+}

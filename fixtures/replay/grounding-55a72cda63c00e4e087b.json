@@ -1,0 +1,204 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 11.0,
+  "cost_usd": 0.002191,
+  "model_ms": 253.6,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.7734,
+  "ungrounded": 0.2266,
+  "verdict": "contradicted",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.853,
+    "share_of_answer": 0.6597,
+    "claims": [
+     0,
+     1,
+     2,
+     3,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.147,
+    "share_of_answer": 0.1137,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "Submission deadline changed from November 20, 2026 at 11:59 p.m. Pacific Time to November 14, 2026 at 11:59 p.m. Pacific Time.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1388,
+    "supported": 0.7373,
+    "contradicted": 0.1308,
+    "not_stated": 0.0878,
+    "not_a_claim": 0.0441,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.3186,
+     "new": 0.6814
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Building period changed from October 22 to November 20, 2026 to October 22 to November 14, 2026.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1057,
+    "supported": 0.7879,
+    "contradicted": 0.0679,
+    "not_stated": 0.0822,
+    "not_a_claim": 0.062,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.311,
+     "new": 0.689
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Winners announced changed from December 4, 2026 to November 28, 2026.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.076,
+    "supported": 0.8401,
+    "contradicted": 0.0524,
+    "not_stated": 0.0704,
+    "not_a_claim": 0.0371,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0894,
+     "new": 0.9106
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Winners are announced on November 28, 2026.",
+     "start": 217,
+     "end": 260,
+     "confidence": 0.907
+    }
+   },
+   {
+    "claim": "Top prize changed from $5,000 to $6,000.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0441,
+    "supported": 0.7274,
+    "contradicted": 0.0836,
+    "not_stated": 0.1284,
+    "not_a_claim": 0.0607,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.2065,
+     "new": 0.7935
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "First place receives $5,000, second place receives $3,000, and third place receives $2,000.",
+     "start": 840,
+     "end": 931,
+     "confidence": 0.689
+    }
+   },
+   {
+    "claim": "Max team size changed from six to four.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.043,
+    "supported": 0.2483,
+    "contradicted": 0.5474,
+    "not_stated": 0.0951,
+    "not_a_claim": 0.1092,
+    "verdict": "contradicted",
+    "sources": {
+     "old": 0.3671,
+     "new": 0.6329
+    },
+    "source": null,
+    "evidence": {
+     "document": "old",
+     "quote": "You may enter alone or in a team of up to six people.",
+     "start": 459,
+     "end": 512,
+     "confidence": 0.75
+    }
+   },
+   {
+    "claim": "Demo video limit changed from no longer than five minutes to no longer than three minutes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0991,
+    "supported": 0.6697,
+    "contradicted": 0.15,
+    "not_stated": 0.089,
+    "not_a_claim": 0.0913,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.1295,
+     "new": 0.8705
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Repository rule changed from The repository may be public or private; if private, share it with judges@northwind.example to a link to a public source repository with its full commit history.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.2093,
+    "supported": 0.8466,
+    "contradicted": 0.0865,
+    "not_stated": 0.0403,
+    "not_a_claim": 0.0267,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0885,
+     "new": 0.9115
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Existing-work rule changed from Projects started before the building period are allowed if the new work is clearly described. to Only projects started during the building period are eligible. Earlier projects are not eligible, even with substantial changes..",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.2841,
+    "supported": 0.8366,
+    "contradicted": 0.0863,
+    "not_stated": 0.0363,
+    "not_a_claim": 0.0408,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0616,
+     "new": 0.9384
+    },
+    "source": "new"
+   }
+  ],
+  "unsupported_claims": [
+   4
+  ],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 4,
+   "supported": 0.2483
+  },
+  "timing": {
+   "read_ms": 260,
+   "total_ms": 262
+  }
+ }
+}

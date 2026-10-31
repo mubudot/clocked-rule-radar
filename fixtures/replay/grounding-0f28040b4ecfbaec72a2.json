@@ -1,0 +1,70 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 4.0,
+  "cost_usd": 0.000797,
+  "model_ms": 81.9,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.9922,
+  "ungrounded": 0.0078,
+  "verdict": "grounded",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.9982,
+    "share_of_answer": 0.9904,
+    "claims": [
+     0
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.0018,
+    "share_of_answer": 0.0018,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "Prizes are now paid through Wise.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 1,
+    "supported": 0.9922,
+    "contradicted": 0.0035,
+    "not_stated": 0.0017,
+    "not_a_claim": 0.0026,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0018,
+     "new": 0.9982
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.",
+     "start": 981,
+     "end": 1088,
+     "confidence": 1
+    }
+   }
+  ],
+  "unsupported_claims": [],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 0,
+   "supported": 0.9922
+  },
+  "timing": {
+   "read_ms": 260,
+   "total_ms": 261
+  }
+ }
+}

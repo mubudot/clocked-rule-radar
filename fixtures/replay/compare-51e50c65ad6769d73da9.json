@@ -1,0 +1,439 @@
+{
+ "endpoint": "compare",
+ "usage": {
+  "endpoint": "compare",
+  "credits": 17.0,
+  "cost_usd": 0.003386,
+  "model_ms": 413.0,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "verdict": "conflicts",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "evidence": "all",
+  "documents": [
+   {
+    "id": "old",
+    "duplicates": [],
+    "overlaps": [
+     "new"
+    ],
+    "conflicts": [
+     "new"
+    ]
+   },
+   {
+    "id": "new",
+    "duplicates": [],
+    "overlaps": [
+     "old"
+    ],
+    "conflicts": [
+     "old"
+    ]
+   }
+  ],
+  "pairs": [
+   {
+    "a": "old",
+    "b": "new",
+    "relation": "conflicting",
+    "related": 0.9983,
+    "probabilities": {
+     "same": 0.0016,
+     "overlapping": 0.0029,
+     "conflicting": 0.9937,
+     "unrelated": 0.0017
+    },
+    "duplicates": [
+     {
+      "kind": "restated",
+      "kinds": {
+       "verbatim": 0.9854,
+       "restated": 0.0046,
+       "elaborated": 0.0061,
+       "different": 0.0039
+      },
+      "confidence": 0.9961,
+      "a": {
+       "document": "old",
+       "quote": "Employees of Northwind Labs and their immediate families may not enter.",
+       "start": 374,
+       "end": 445,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Employees of Northwind Labs and their immediate families may not enter.\n\n## 3.",
+       "start": 439,
+       "end": 517,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "restated",
+      "kinds": {
+       "verbatim": 0.987,
+       "restated": 0.0054,
+       "elaborated": 0.004,
+       "different": 0.0036
+      },
+      "confidence": 0.9964,
+      "a": {
+       "document": "old",
+       "quote": "Each person may be a member of only one team.",
+       "start": 513,
+       "end": 558,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Each person may be a member of only one team.\n\n## 4.",
+       "start": 579,
+       "end": 631,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "restated",
+      "kinds": {
+       "verbatim": 0.9296,
+       "restated": 0.0377,
+       "elaborated": 0.0214,
+       "different": 0.0113
+      },
+      "confidence": 0.9887,
+      "a": {
+       "document": "old",
+       "quote": "The total prize pool is $10,000.",
+       "start": 807,
+       "end": 839,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Prizes\nThe total prize pool is $10,000.",
+       "start": 849,
+       "end": 888,
+       "confidence": 1
+      }
+     }
+    ],
+    "conflicts": [
+     {
+      "kind": "date_or_version",
+      "kinds": {
+       "value": 0.0068,
+       "date_or_version": 0.9852,
+       "rule_or_condition": 0.0028,
+       "scope": 0.0011,
+       "name": 0.0021,
+       "no_conflict": 0.002
+      },
+      "confidence": 0.998,
+      "a": {
+       "document": "old",
+       "quote": "The building period runs from October 22 to November 20, 2026.",
+       "start": 87,
+       "end": 149,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Dates\nThe building period runs from October 22 to November 14, 2026.",
+       "start": 81,
+       "end": 149,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "date_or_version",
+      "kinds": {
+       "value": 0.0064,
+       "date_or_version": 0.9841,
+       "rule_or_condition": 0.0041,
+       "scope": 0.0013,
+       "name": 0.0019,
+       "no_conflict": 0.0022
+      },
+      "confidence": 0.9978,
+      "a": {
+       "document": "old",
+       "quote": "Submissions close on November 20, 2026 at 11:59 p.m.",
+       "start": 150,
+       "end": 202,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Submissions close on November 14, 2026 at 11:59 p.m. Pacific Time.",
+       "start": 150,
+       "end": 216,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "date_or_version",
+      "kinds": {
+       "value": 0.0019,
+       "date_or_version": 0.9936,
+       "rule_or_condition": 0.0012,
+       "scope": 0.0008,
+       "name": 0.0013,
+       "no_conflict": 0.0011
+      },
+      "confidence": 0.9989,
+      "a": {
+       "document": "old",
+       "quote": "Winners are announced on December 4, 2026.",
+       "start": 217,
+       "end": 259,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Winners are announced on November 28, 2026.\n\n## 2.",
+       "start": 217,
+       "end": 267,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "date_or_version",
+      "kinds": {
+       "value": 0.0941,
+       "date_or_version": 0.5071,
+       "rule_or_condition": 0.0795,
+       "scope": 0.2341,
+       "name": 0.0383,
+       "no_conflict": 0.047
+      },
+      "confidence": 0.953,
+      "a": {
+       "document": "old",
+       "quote": "The building period runs from October 22 to November 20, 2026.",
+       "start": 87,
+       "end": 149,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Eligibility\nThe sprint is open to individuals aged 18 or older in any country where the contest is lawful, except residents of Quebec and of countries under US sanctions.",
+       "start": 268,
+       "end": 438,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "value",
+      "kinds": {
+       "value": 0.9852,
+       "date_or_version": 0.0022,
+       "rule_or_condition": 0.0052,
+       "scope": 0.0027,
+       "name": 0.0028,
+       "no_conflict": 0.0019
+      },
+      "confidence": 0.9981,
+      "a": {
+       "document": "old",
+       "quote": "You may enter alone or in a team of up to six people.",
+       "start": 459,
+       "end": 512,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Teams\nYou may enter alone or in a team of up to four people.",
+       "start": 518,
+       "end": 578,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "value",
+      "kinds": {
+       "value": 0.921,
+       "date_or_version": 0.0086,
+       "rule_or_condition": 0.0483,
+       "scope": 0.0077,
+       "name": 0.0071,
+       "no_conflict": 0.0073
+      },
+      "confidence": 0.9927,
+      "a": {
+       "document": "old",
+       "quote": "Submit a project page with a description, a link to a source repository, and a demo video no longer than five minutes.",
+       "start": 581,
+       "end": 699,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "What to submit\nSubmit a project page with a description, a link to a public source repository with its full commit history, and a demo video no longer than three minutes.",
+       "start": 632,
+       "end": 802,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "rule_or_condition",
+      "kinds": {
+       "value": 0.002,
+       "date_or_version": 0.0023,
+       "rule_or_condition": 0.9861,
+       "scope": 0.0045,
+       "name": 0.0025,
+       "no_conflict": 0.0026
+      },
+      "confidence": 0.9974,
+      "a": {
+       "document": "old",
+       "quote": "The repository may be public or private; if private, share it with judges@northwind.example.",
+       "start": 700,
+       "end": 792,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Private repositories are not accepted.\n\n## 5.",
+       "start": 803,
+       "end": 848,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "value",
+      "kinds": {
+       "value": 0.9938,
+       "date_or_version": 0.0014,
+       "rule_or_condition": 0.0016,
+       "scope": 0.001,
+       "name": 0.0012,
+       "no_conflict": 0.001
+      },
+      "confidence": 0.999,
+      "a": {
+       "document": "old",
+       "quote": "First place receives $5,000, second place receives $3,000, and third place receives $2,000.",
+       "start": 840,
+       "end": 931,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "First place receives $6,000, second place receives $2,500, and third place receives $1,500.",
+       "start": 889,
+       "end": 980,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "name",
+      "kinds": {
+       "value": 0.0214,
+       "date_or_version": 0.0215,
+       "rule_or_condition": 0.3924,
+       "scope": 0.0181,
+       "name": 0.5341,
+       "no_conflict": 0.0125
+      },
+      "confidence": 0.9875,
+      "a": {
+       "document": "old",
+       "quote": "Prizes are paid by bank transfer within 30 days of verification.",
+       "start": 932,
+       "end": 996,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.\n\n## 6.",
+       "start": 981,
+       "end": 1095,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "rule_or_condition",
+      "kinds": {
+       "value": 0.0037,
+       "date_or_version": 0.0036,
+       "rule_or_condition": 0.9737,
+       "scope": 0.0112,
+       "name": 0.0035,
+       "no_conflict": 0.0044
+      },
+      "confidence": 0.9956,
+      "a": {
+       "document": "old",
+       "quote": "Projects started before the building period are allowed if the new work is clearly described.",
+       "start": 1122,
+       "end": 1215,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Existing work\nOnly projects started during the building period are eligible.",
+       "start": 1200,
+       "end": 1276,
+       "confidence": 1
+      }
+     },
+     {
+      "kind": "rule_or_condition",
+      "kinds": {
+       "value": 0.0023,
+       "date_or_version": 0.0025,
+       "rule_or_condition": 0.9803,
+       "scope": 0.0088,
+       "name": 0.0026,
+       "no_conflict": 0.0035
+      },
+      "confidence": 0.9965,
+      "a": {
+       "document": "old",
+       "quote": "Projects started before the building period are allowed if the new work is clearly described.",
+       "start": 1122,
+       "end": 1215,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Earlier projects are not eligible, even with substantial changes.\n\n## 8.",
+       "start": 1277,
+       "end": 1349,
+       "confidence": 1
+      }
+     }
+    ]
+   }
+  ],
+  "duplicates": [],
+  "overlaps": [
+   0
+  ],
+  "conflicts": [
+   0
+  ],
+  "related_pairs": [
+   0
+  ],
+  "stages": {
+   "pairs_reread": 0,
+   "pairs_ms": 286,
+   "passage_reads": 1,
+   "passages_ms": 118,
+   "passages": 17,
+   "counterparts_ms": 228,
+   "kinds_ms": 61
+  },
+  "timing": {
+   "read_ms": 693,
+   "total_ms": 696
+  }
+ }
+}

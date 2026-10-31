@@ -1,0 +1,121 @@
+{
+ "endpoint": "extract",
+ "usage": {
+  "endpoint": "extract",
+  "credits": 6.0,
+  "cost_usd": 0.001195,
+  "model_ms": 147.8,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "fields": {
+   "submission_deadline": {
+    "value": "November 20, 2026 at 11:59 p.m. Pacific Time",
+    "start": 171,
+    "end": 215,
+    "confidence": 0.9999999995456093,
+    "p_verify": 0.9999999995456093
+   },
+   "building_period": {
+    "value": "October 22 to November 20, 2026",
+    "start": 117,
+    "end": 148,
+    "confidence": 0.9999999946765581,
+    "p_verify": 0.9999999946765581
+   },
+   "winners_announced": {
+    "value": "December 4, 2026",
+    "start": 242,
+    "end": 258,
+    "confidence": 0.9999999996881179,
+    "p_verify": 0.9999999996881179,
+    "normalized": {
+     "value": "2026-12-04",
+     "source": "derived",
+     "rule": "date_month_name",
+     "confidence": 0.9999999996881179
+    }
+   },
+   "prize_pool": {
+    "value": "$10,000",
+    "start": 831,
+    "end": 838,
+    "confidence": 0.9999999999050251,
+    "p_verify": 0.9999999999050251
+   },
+   "top_prize": {
+    "value": "$5,000",
+    "start": 861,
+    "end": 867,
+    "confidence": 0.9999999999027454,
+    "p_verify": 0.9999999999027454
+   },
+   "max_team_size": {
+    "value": "six",
+    "start": 501,
+    "end": 504,
+    "confidence": 0.9999999977813121,
+    "p_verify": 0.9999999977813121,
+    "normalized": null,
+    "normalization_reason": "not_parseable_or_not_stated"
+   },
+   "video_limit": {
+    "value": "no longer than five minutes",
+    "start": 671,
+    "end": 698,
+    "confidence": 0.9999999998632034,
+    "p_verify": 0.9999999998632034
+   },
+   "repository_rule": {
+    "value": "The repository may be public or private; if private, share it with judges@northwind.example",
+    "start": 700,
+    "end": 791,
+    "confidence": 0.9999999980772356,
+    "p_verify": 0.9999999980772356
+   },
+   "existing_work_rule": {
+    "value": "Projects started before the building period are allowed if the new work is clearly described.",
+    "start": 1122,
+    "end": 1215,
+    "confidence": 0.99999999973023,
+    "p_verify": 0.99999999973023
+   },
+   "excluded_residents": {
+    "value": [],
+    "items": [],
+    "confidence": 1
+   },
+   "payout_method": {
+    "value": "bank transfer",
+    "start": 951,
+    "end": 964,
+    "confidence": 0.9999998899134318,
+    "p_verify": 0.9999998899134318
+   }
+  },
+  "timing": {
+   "read_ms": 147,
+   "forwards": {
+    "fields": [
+     7,
+     0
+    ]
+   },
+   "stages": {
+    "fields": {
+     "reader": "recognition",
+     "doc": 0,
+     "branches": 2,
+     "generate": 100,
+     "locate": 0,
+     "verify": 44,
+     "assemble": 0
+    }
+   },
+   "total_ms": 147,
+   "server_ms": 229
+  }
+ }
+}

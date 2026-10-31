@@ -1,0 +1,210 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 10.0,
+  "cost_usd": 0.001992,
+  "model_ms": 225.1,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.8302,
+  "ungrounded": 0.1698,
+  "verdict": "grounded",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.9538,
+    "share_of_answer": 0.7919,
+    "claims": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.0462,
+    "share_of_answer": 0.0384,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "Deadline moved up: submissions now close November 14, 2026 (was November 20) at 11:59 p.m. Pacific Time.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.144,
+    "supported": 0.6412,
+    "contradicted": 0.1296,
+    "not_stated": 0.1777,
+    "not_a_claim": 0.0515,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.1489,
+     "new": 0.8511
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Submissions close on November 14, 2026 at 11:59 p.m.",
+     "start": 150,
+     "end": 202,
+     "confidence": 0.988
+    }
+   },
+   {
+    "claim": "Building period end date changed from November 20 to November 14, 2026.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0983,
+    "supported": 0.7477,
+    "contradicted": 0.1003,
+    "not_stated": 0.0866,
+    "not_a_claim": 0.0654,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0621,
+     "new": 0.9379
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "The building period runs from October 22 to November 14, 2026.",
+     "start": 87,
+     "end": 149,
+     "confidence": 0.793
+    }
+   },
+   {
+    "claim": "Only projects started during the building period are eligible; earlier projects are out even with substantial changes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1634,
+    "supported": 0.9941,
+    "contradicted": 0.003,
+    "not_stated": 0.0015,
+    "not_a_claim": 0.0015,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0014,
+     "new": 0.9986
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Repository must be public with full commit history; private repositories are no longer accepted.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.133,
+    "supported": 0.9692,
+    "contradicted": 0.0166,
+    "not_stated": 0.0072,
+    "not_a_claim": 0.007,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0047,
+     "new": 0.9953
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Demo video limit shortened from five minutes to three minutes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0859,
+    "supported": 0.6596,
+    "contradicted": 0.1333,
+    "not_stated": 0.1052,
+    "not_a_claim": 0.1019,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.1194,
+     "new": 0.8806
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Prizes paid through Wise, not bank transfer; winners must submit a tax form before payment.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.126,
+    "supported": 0.935,
+    "contradicted": 0.0358,
+    "not_stated": 0.017,
+    "not_a_claim": 0.0123,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0079,
+     "new": 0.9921
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.",
+     "start": 981,
+     "end": 1088,
+     "confidence": 1
+    }
+   },
+   {
+    "claim": "First place up to $6,000 (was $5,000); second place down to $2,500 (was $3,000); third place down to $1,500 (was $2,000).",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1676,
+    "supported": 0.7746,
+    "contradicted": 0.1279,
+    "not_stated": 0.0551,
+    "not_a_claim": 0.0424,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0601,
+     "new": 0.9399
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Winners announced November 28, 2026 (was December 4, 2026).",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0817,
+    "supported": 0.841,
+    "contradicted": 0.0596,
+    "not_stated": 0.0396,
+    "not_a_claim": 0.0599,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0539,
+     "new": 0.9461
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Winners are announced on November 28, 2026.",
+     "start": 217,
+     "end": 260,
+     "confidence": 0.995
+    }
+   }
+  ],
+  "unsupported_claims": [],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 0,
+   "supported": 0.6412
+  },
+  "timing": {
+   "read_ms": 233,
+   "total_ms": 234
+  }
+ }
+}

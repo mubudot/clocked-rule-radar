@@ -1,0 +1,63 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 4.0,
+  "cost_usd": 0.000797,
+  "model_ms": 91.1,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.0063,
+  "ungrounded": 0.9937,
+  "verdict": "contradicted",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0,
+    "share_of_answer": 0.0041,
+    "claims": []
+   },
+   {
+    "id": "old",
+    "share": 0,
+    "share_of_answer": 0.0022,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "The submission deadline was extended to November 24, 2026.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 1,
+    "supported": 0.0063,
+    "contradicted": 0.9885,
+    "not_stated": 0.0031,
+    "not_a_claim": 0.0021,
+    "verdict": "contradicted",
+    "sources": {
+     "old": 0.351,
+     "new": 0.649
+    },
+    "source": null
+   }
+  ],
+  "unsupported_claims": [
+   0
+  ],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 0,
+   "supported": 0.0063
+  },
+  "timing": {
+   "read_ms": 152,
+   "total_ms": 153
+  }
+ }
+}
