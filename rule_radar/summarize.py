@@ -62,8 +62,10 @@ def _usable_fields(fields: list[dict[str, Any]], changes: list[dict[str, Any]]) 
     'not your case' and Compare's 'wording only' apply to Extract facts too)."""
     ok = {c["id"] for c in changes if _included(c)}
     where = _field_changes(fields, changes)
-    return [{**f, "change_ids": [i for i in where[f["name"]] if i in ok]}
-            for f in fields if f["name"] in where and any(i in ok for i in where[f["name"]])]
+    # A field is usable only when *every* changed clause it was read from may be in the brief:
+    # a list value read from an excluded clause and an actionable one cannot be split safely.
+    return [{**f, "change_ids": where[f["name"]]}
+            for f in fields if f["name"] in where and where[f["name"]] and all(i in ok for i in where[f["name"]])]
 
 
 def _facts(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> dict[str, Any]:
@@ -79,14 +81,14 @@ def _facts(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> dict[
 def _parse_lines(text: str) -> list[dict[str, Any]]:
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
-        raise LLMError("model reply has no JSON object")
+        raise LLMError("model reply has no JSON object", retryable=True)
     try:
         data = json.loads(m.group(0))
     except ValueError:
-        raise LLMError("model reply is not valid JSON") from None
+        raise LLMError("model reply is not valid JSON", retryable=True) from None
     lines = data.get("lines") if isinstance(data, dict) else None
     if not isinstance(lines, list):
-        raise LLMError("model reply has no 'lines' list")
+        raise LLMError("model reply has no 'lines' list", retryable=True)
     return [ln for ln in lines if isinstance(ln, dict)]
 
 
@@ -97,6 +99,34 @@ def _clause_line(c: dict[str, Any]) -> str:
     if c["status"] == "added":
         return f"New rule in {sec}: {c['new']['text']}"
     return f"Removed from {sec}: {c['old']['text']}"
+
+
+def _fields_cover(change: dict[str, Any], fields: list[dict[str, Any]]) -> bool:
+    """True when the Extract values found in this clause account for everything that changed in it
+    (e.g. "bank transfer" -> "through Wise"); False when the clause also changed somewhere else
+    (e.g. a new tax-form duty added to the same sentence)."""
+    from difflib import SequenceMatcher
+    new, old = change.get("new"), change.get("old")
+    spans_new = [tuple(sp) for f in fields for sp in ((f.get("new") or {}).get("spans") or [])]
+    spans_old = [tuple(sp) for f in fields for sp in ((f.get("old") or {}).get("spans") or [])]
+    if change["status"] == "edited" and new and old:
+        ranges_new, ranges_old = [], []
+        sm = SequenceMatcher(None, old["text"], new["text"], autojunk=False)
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag == "equal":
+                continue
+            if old["text"][i1:i2].strip(" ,.;:()'\"-"):
+                ranges_old.append((old["start"] + i1, old["start"] + i2))
+            if new["text"][j1:j2].strip(" ,.;:()'\"-"):
+                ranges_new.append((new["start"] + j1, new["start"] + j2))
+    elif new:
+        ranges_new, ranges_old = [(new["start"], new["end"])], []
+    else:
+        ranges_new, ranges_old = [], [(old["start"], old["end"])] if old else []
+
+    def inside(ranges, spans):
+        return all(any(s <= a and b <= e for s, e in spans) for a, b in ranges)
+    return inside(ranges_new, spans_new) and inside(ranges_old, spans_old)
 
 
 def offline_brief(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -114,11 +144,12 @@ def offline_brief(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -
         for f in mine:
             used.add(f["name"])
             o, n = _value((f.get("old") or {}).get("value")), _value((f.get("new") or {}).get("value"))
-            text = (f"{f['label']} changed from {o} to {n}." if f["status"] == "changed" else
-                    f"{f['label']} is now stated: {n}." if f["status"] == "added" else
-                    f"{f['label']} is no longer stated (was {o}).")
+            text = (f"{f['label']}: the old rules said \u201c{o}\u201d; the new rules say \u201c{n}\u201d." if f["status"] == "changed" else
+                    f"{f['label']}: the new rules say \u201c{n}\u201d (the old rules did not say)." if f["status"] == "added" else
+                    f"{f['label']}: the old rules said \u201c{o}\u201d; the new rules no longer say.")
             lines.append({"text": text, "change_ids": f["change_ids"]})
-        if not mine and not any(c["id"] in f["change_ids"] for f in usable):
+        covering = [f for f in usable if c["id"] in f["change_ids"]]
+        if not covering or not _fields_cover(c, covering):
             lines.append({"text": _clause_line(c), "change_ids": [c["id"]]})
     return lines[:MAX_LINES]
 
@@ -138,7 +169,7 @@ def write_brief(changes: list[dict[str, Any]], fields: list[dict[str, Any]],
         ids = [i for i in raw_ids if isinstance(i, str) and i in known] if isinstance(raw_ids, list) else []
         out.append({"text": item["text"].strip(), "change_ids": ids})
     if not out:
-        raise LLMError("model returned no usable lines")
+        raise LLMError("model returned no usable lines", retryable=True)
     return out, llm.name
 
 

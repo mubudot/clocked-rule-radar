@@ -17,7 +17,7 @@ const MATERIALITY = {
   unconfirmed: "edited · Compare did not confirm — read it", new: "new clause", removed: "removed clause",
   moved: "moved · same content elsewhere",
 };
-const STATUS_BADGE = { verified: "✓", check: "?", rejected: "✗", unverified: "·" };
+const STATUS_BADGE = { verified: "✓", check: "?", rejected: "✗", not_a_claim: "–", unverified: "·" };
 const STAGES = [["diff", "Local diff"], ["compare", "Compare"], ["extract", "Extract"], ["rerank", "Rerank"],
   ["brief", "Brief"], ["verify", "Verify"], ["repair", "Repair"]];
 
@@ -65,8 +65,11 @@ async function loadConfig() {
   const live = cfg.mode !== "replay";
   chips.append(el("span", { class: `chip ${live ? "live" : "replay"}` }, el("span", { class: "dot" }),
     live ? `Clocked: live${cfg.mode === "record" ? " (recording)" : ""}` : "Clocked: replay of recorded responses"));
-  chips.append(el("span", { class: "chip" }, el("span", { class: "dot" }),
-    cfg.llm_provider === "offline" ? "Brief: template (no model)" : `Brief: ${cfg.llm_provider} · ${cfg.llm_model}`));
+  // In replay mode the bundled sample's brief comes from the recorded model output, so say so;
+  // after a scan the chip shows who actually wrote the brief (brief.source).
+  const writer = !live ? "Brief: recorded model output (bundled sample)"
+    : cfg.llm_provider === "offline" ? "Brief: template (no model)" : `Brief: ${cfg.llm_provider} · ${cfg.llm_model}`;
+  chips.append(el("span", { class: "chip", id: "briefChip" }, el("span", { class: "dot" }), writer));
   if (!live) $("runHint").textContent = "Replay mode: the bundled sample runs on recorded Clocked responses. Set CLOCKED_API_KEY for your own text.";
 }
 
@@ -100,6 +103,8 @@ async function run() {
     state.report = rep;
     state.selected = null;
     state.sources = rep.versions;
+    const chip = $("briefChip");
+    if (chip && rep.brief && rep.brief.source) clear(chip).append(el("span", { class: "dot" }), `Brief: written by ${rep.brief.source}`);
     render();
     $("results").hidden = false;
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -163,7 +168,8 @@ function renderVerdict(r) {
   v.classList.toggle("calm", a.action === "no");
   v.classList.toggle("unknown", unknown);
   let says;
-  if (unknown) says = `Could not rank the changes for you (${(a.failed_stages || []).join(", ")} failed). Read every change below yourself.`;
+  const gaps = [...(a.failed_stages || []).map((k) => `${k} failed`), ...(a.partial_stages || []).map((k) => `${k} ran only in part`)];
+  if (unknown) says = `Could not rank every change for you (${gaps.join(", ")}). Read every change below yourself.`;
   else if (act) says = `${act} ${act > 1 ? "changes affect" : "change affects"} what you must do before the deadline.`;
   else says = yes ? "Rerank says you need to act; see the changes below." : "No change needs action from you.";
   v.append(
@@ -171,7 +177,7 @@ function renderVerdict(r) {
       !unknown && an && typeof an.probability === "number" ? el("span", { class: "score" }, ` ${pct(an.probability)}`) : null),
     el("div", { class: "says" }, says,
       !unknown && notMine ? ` ${notMine} ${notMine > 1 ? "changes apply" : "change applies"} to other entrants only.` : "",
-      a.complete === false && !unknown ? el("div", { class: "notverified" }, `Incomplete: ${(a.failed_stages || []).join(", ") || "Verify"} did not fully run — see Pipeline.`) : null,
+      a.complete === false && !unknown ? el("div", { class: "notverified" }, `Incomplete: ${gaps.join(", ") || "Verify did not fully run"} — see Pipeline.`) : null,
       el("div", { class: "hint" }, `${r.usage.calls} Clocked calls · ${r.usage.credits} credits · ${(r.elapsed_ms / 1000).toFixed(1)} s`
         + (r.usage.replayed ? " · replayed recordings" : ""))),
     el("div", { class: "counts" },
@@ -200,8 +206,8 @@ function claimItem(row, text, showVerdict, sources = null) {
   const ev = row.evidence;
   const why = [];
   if (row.repaired_from) why.push(el("span", { class: "repaired" }, "rewritten"), el("span", { class: "why" }, `Verify rejected: “${row.repaired_from}”`));
-  if (showVerdict || row.status === "rejected") {
-    const word = { verified: "Supported", check: "Weakly supported", rejected: row.verdict === "not_stated" ? "Not stated in either version" : "Contradicted by the rules", unverified: row.error ? `Not verified (${row.error})` : "Not verified" }[row.status];
+  if (showVerdict || row.status === "rejected" || row.status === "not_a_claim") {
+    const word = { verified: "Supported", check: "Weakly supported", rejected: row.verdict === "not_stated" ? "Not stated in either version" : "Contradicted by the rules", not_a_claim: "Not a factual claim — nothing to check", unverified: row.error ? `Not verified (${row.error})` : "Not verified" }[row.status];
     why.push(el("span", { class: "why" }, word, ev && ev.quote ? [": ", el("q", {}, ev.quote), ` (${ev.document === "old" ? "before" : "now"})`] : ""));
   }
   const li = el("li", { tabindex: 0 },
@@ -320,7 +326,8 @@ function renderStages(r) {
     if (s.usage) ms += s.usage.model_ms || 0;
     ol.append(el("li", { class: `stage ${s.status}` }, el("b", {}, label), el("span", { class: "st" }, s.status),
       el("span", { class: "n" }, s.status === "failed" ? `${s.error} → ${s.fallback}` : s.note || ""),
-      s.usage ? el("span", { class: "n" }, `${s.usage.credits} credits · ${s.usage.calls} call${s.usage.calls > 1 ? "s" : ""}`
+      s.usage ? el("span", { class: "n" }, `${s.usage.credits} credits · ${s.usage.calls} call${s.usage.calls !== 1 ? "s" : ""}`
+        + (s.usage.failed_calls ? ` · ${s.usage.failed_calls} failed` : "")
         + (s.usage.attempts > s.usage.calls ? ` · ${s.usage.attempts - s.usage.calls} retr${s.usage.attempts - s.usage.calls > 1 ? "ies" : "y"}` : "")) : null));
   }
   $("traceSum").textContent = `${r.usage.credits} credits · ${Math.round(ms)} ms model time`;

@@ -169,11 +169,12 @@ def test_rerank_batches_every_change_and_flags_long_passages():
     changes = [_chg(i) for i in range(300)]
     changes.append({"id": "new:big", "status": "edited", "materiality": "material", "section": "S",
                     "old": {"text": "o" * 15000}, "new": {"text": "n" * 15000}})
-    payloads, short = rerank.build_payloads(changes, {})
+    payloads, short, lossy = rerank.build_payloads(changes, {})
     assert [len(p["documents"]) for p in payloads] == [256, 45]
     assert all("questions" not in p for p in payloads)          # no partial yes/no answer
     big = next(d for p in payloads for d in p["documents"] if d["id"] == "new:big")
     assert short == {"new:big"} and "Now: nnn" in big["text"] and len(big["text"]) <= rerank.MAX_PASSAGE
+    assert lossy == {"new:big"}   # every character differs, so a window cannot keep the whole change
 
 
 def test_rerank_merge_orders_by_relevance_across_batches():

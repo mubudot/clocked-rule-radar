@@ -37,7 +37,7 @@ class ReplayClient:
         rec = json.loads(path.read_text("utf-8"))
         u = rec.get("usage", {})
         usage = Usage(endpoint, u.get("credits", 0.0), u.get("cost_usd", 0.0), u.get("model_ms", 0.0),
-                      1, replayed=True)
+                      1, replayed=True, ledger_replay=bool(u.get("ledger_replay")))
         self.usage_log.append(usage)
         return rec["response"], usage
 

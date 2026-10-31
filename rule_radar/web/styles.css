@@ -116,6 +116,7 @@ button[disabled] { opacity: .6; cursor: progress; }
 .b-verified { background: var(--ok); }
 .b-check { background: var(--check); }
 .b-rejected { background: var(--bad); }
+.b-not_a_claim { background: var(--calm); }
 .b-unverified { background: var(--calm); }
 .score { font: 12px var(--mono); color: var(--muted); white-space: nowrap; padding-top: 3px; }
 .why { display: block; color: var(--muted); font-size: .84rem; margin-top: 3px; }
@@ -192,6 +193,8 @@ mark.ok { background: var(--ins); box-shadow: 0 0 0 2px var(--ins); }
 .stage.failed { border-color: var(--bad); background: var(--bad-soft); }
 .stage.failed .st { color: var(--bad); }
 .stage.skipped .st { color: var(--calm); }
+.stage.partial { border-color: var(--check); }
+.stage.partial .st { color: var(--check); }
 .stage .n { color: var(--muted); display: block; margin-top: 2px; overflow-wrap: anywhere; }
 
 .foot { max-width: 1280px; margin: 0 auto; padding: 8px 24px 40px; color: var(--muted); font-size: .82rem; }

@@ -7,6 +7,7 @@ is marked NOT VERIFIED".
 """
 from __future__ import annotations
 
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Protocol
@@ -17,6 +18,7 @@ from .clocked import ClockedError, Usage
 from .llm.base import LLM, LLMError
 from .stages import compare, extract, rerank, verify
 
+MAX_CHECK_CLAIMS = 20       # rumour checker: one Verify request per claim
 MAX_VERSION_CHARS = 90_000   # two versions must fit Compare/Verify's 200k-character budget
 
 
@@ -39,33 +41,54 @@ def _check_inputs(old_text: str, new_text: str) -> None:
 
 
 class _Stages:
+    """Per-stage status, plus the usage of every Clocked call that returned a result.
+
+    Usage is recorded per call, not per stage, so a stage that half-failed (one Extract
+    read out of two, two Rerank batches out of three) still reports the credits it spent."""
+
     def __init__(self) -> None:
         self.items: dict[str, dict[str, Any]] = {}
         self.usage: list[Usage] = []
+        self.by_stage: dict[str, list[Usage]] = {}
+        self.failed_calls: dict[str, int] = {}
+        self._lock = threading.Lock()
 
-    def ok(self, name: str, usage: Usage | list[Usage] | None = None, note: str = "") -> None:
-        used = usage if isinstance(usage, list) else [usage] if usage else []
-        entry: dict[str, Any] = {"status": "ok", "note": note}
-        if used:
-            entry["usage"] = {"credits": round(sum(u.credits for u in used), 2), "calls": len(used),
-                              "attempts": sum(u.attempts for u in used),
-                              "model_ms": round(sum(u.model_ms for u in used), 1)}
+    def call(self, stage: str, client: Client, endpoint: str, payload: dict[str, Any]):
+        try:
+            res = client.call(endpoint, payload)
+        except ClockedError as e:
+            with self._lock:
+                self.failed_calls[stage] = self.failed_calls.get(stage, 0) + 1
+            return None, e
+        with self._lock:
+            self.usage.append(res[1])
+            self.by_stage.setdefault(stage, []).append(res[1])
+        return res, None
+
+    def _usage(self, name: str) -> dict[str, Any] | None:
+        used = self.by_stage.get(name) or []
+        failed = self.failed_calls.get(name, 0)
+        if not used and not failed:
+            return None
+        return {"credits": round(sum(u.credits for u in used), 2), "calls": len(used),
+                "failed_calls": failed, "attempts": sum(u.attempts for u in used),
+                "model_ms": round(sum(u.model_ms for u in used), 1)}
+
+    def ok(self, name: str, note: str = "", partial: bool = False) -> None:
+        entry: dict[str, Any] = {"status": "partial" if partial else "ok", "note": note}
+        if (u := self._usage(name)) is not None:
+            entry["usage"] = u
         self.items[name] = entry
-        self.usage.extend(used)
 
     def fail(self, name: str, err: Exception, fallback: str) -> None:
         kind = err.kind if isinstance(err, ClockedError) else "model"
-        self.items[name] = {"status": "failed", "error": str(err), "error_kind": kind, "fallback": fallback}
+        entry: dict[str, Any] = {"status": "failed", "error": str(err), "error_kind": kind, "fallback": fallback}
+        if (u := self._usage(name)) is not None:
+            entry["usage"] = u
+        self.items[name] = entry
 
     def skip(self, name: str, note: str) -> None:
         self.items[name] = {"status": "skipped", "note": note}
-
-
-def _call(client: Client, endpoint: str, payload: dict[str, Any]):
-    try:
-        return client.call(endpoint, payload), None
-    except ClockedError as e:
-        return None, e
 
 
 def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = None,
@@ -80,14 +103,14 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
 
     # Phase 1: Compare and both Extract reads are independent -> run them together.
     with ThreadPoolExecutor(max_workers=3) as pool:
-        f_cmp = pool.submit(_call, client, "compare", compare.build_payload(old_text, new_text))
-        f_old = pool.submit(_call, client, "extract", extract.build_payload(old_text))
-        f_new = pool.submit(_call, client, "extract", extract.build_payload(new_text))
+        f_cmp = pool.submit(st.call, "compare", client, "compare", compare.build_payload(old_text, new_text))
+        f_old = pool.submit(st.call, "extract", client, "extract", extract.build_payload(old_text))
+        f_new = pool.submit(st.call, "extract", client, "extract", extract.build_payload(new_text))
         (cmp_res, cmp_err), (old_res, old_err), (new_res, new_err) = f_cmp.result(), f_old.result(), f_new.result()
 
     if cmp_res:
         changes = compare.interpret(cmp_res[0], aligned, old_cl, new_cl)
-        st.ok("compare", cmp_res[1], note=f"verdict: {cmp_res[0].get('verdict')}")
+        st.ok("compare", note=f"verdict: {cmp_res[0].get('verdict')}")
     else:
         changes = compare.local_only(aligned)
         st.fail("compare", cmp_err, "every edit is shown as unconfirmed (local diff only)")
@@ -95,31 +118,39 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     fields: list[dict[str, Any]] = []
     if old_res and new_res:
         fields = extract.diff_fields(extract.interpret(old_res[0], old_text), extract.interpret(new_res[0], new_text))
-        st.ok("extract", [old_res[1], new_res[1]], note="old and new version read")
+        st.ok("extract", note="old and new version read")
     else:
         st.fail("extract", old_err or new_err, "key-facts table not available")
 
     # Phase 2: Rerank orders what is left by impact on this entrant.
     ranks, action_needed = None, None
-    rr_payloads, shortened = rerank.build_payloads(changes, profile, query)
+    rr_payloads, shortened, lossy = rerank.build_payloads(changes, profile, query)
+    rerank_gap = False   # some change got no usable judgment -> the overall answer is not complete
     if not rr_payloads:
         st.skip("rerank", "no rule changes to rank")
     else:
-        parts, used, rr_err = [], [], None
+        parts, rr_err = [], None
         for p in rr_payloads:
-            res, rr_err = _call(client, "rerank", p)
+            res, rr_err = st.call("rerank", client, "rerank", p)
             if not res:
                 break
             r, verdict = rerank.interpret(res[0])
             parts.append(r)
-            used.append(res[1])
             action_needed = action_needed or verdict
         if rr_err is None:
             ranks = rerank.merge(parts)
-            note = f"{len(ranks)} changes ranked" + (f" in {len(rr_payloads)} requests" if len(rr_payloads) > 1 else "")
+            sent = {d["id"] for p in rr_payloads for d in p["documents"]}
+            missing = sorted(sent - set(ranks))
+            note = f"{len(ranks)} of {len(sent)} changes ranked" + (
+                f" in {len(rr_payloads)} requests" if len(rr_payloads) > 1 else "")
             if shortened:
                 note += f"; {len(shortened)} long change(s) ranked on a shortened passage"
-            st.ok("rerank", used, note=note)
+            if missing:
+                note += f"; no judgment for {len(missing)} change(s)"
+            if lossy:
+                note += f"; {len(lossy)} change(s) too long to rank in full"
+            rerank_gap = bool(missing or lossy)
+            st.ok("rerank", note=note, partial=rerank_gap)
         else:
             action_needed = None
             st.fail("rerank", rr_err, "changes are ordered by a local rule (material first)")
@@ -130,8 +161,16 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     # Phase 3: the brief (model, or template when there is no model / the model fails).
     brief_source = "template"
     try:
-        lines, brief_source = summarize.write_brief(changes, fields, llm)
-        st.ok("brief", note=brief_source)
+        try:
+            lines, brief_source = summarize.write_brief(changes, fields, llm)
+        except LLMError as first:
+            if not first.retryable:
+                raise
+            lines, brief_source = summarize.write_brief(changes, fields, llm)  # one more try, then template
+            first_note = f"; first reply unusable ({first})"
+        else:
+            first_note = ""
+        st.ok("brief", note=brief_source + first_note)
     except LLMError as e:
         lines = summarize.offline_brief(changes, fields)
         st.fail("brief", e, "template brief written from the change list")
@@ -152,7 +191,8 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
         "counts": counts, "stages": st.items,
         "usage": {"credits": round(sum(u.credits for u in st.usage), 2),
                   "cost_usd": round(sum(u.cost_usd for u in st.usage), 6),
-                  "calls": len(st.usage), "replayed": any(u.replayed for u in st.usage)},
+                  "calls": len(st.usage), "replayed": any(u.replayed for u in st.usage),
+                  "ledger_replays": sum(1 for u in st.usage if u.ledger_replay)},
         "elapsed_ms": round((time.monotonic() - t0) * 1000),
     }
 
@@ -175,16 +215,25 @@ def relevant(change: dict[str, Any]) -> bool:
 
 def _assessment(stages: dict[str, dict[str, Any]], changes: list[dict[str, Any]],
                 action_needed: dict[str, Any] | None, brief: dict[str, Any]) -> dict[str, Any]:
-    """Overall answer + whether it can be trusted. Used by the UI banner and CLI exit codes."""
+    """Overall answer + whether it can be trusted. Used by the UI banner and CLI exit codes.
+
+    A stage that ran only in part (Rerank judged some changes but not all, Verify answered for
+    some lines) makes the run incomplete. An all-clear is never given on partial coverage: a
+    "yes" from part of the changes still stands, but "no" becomes "unknown"."""
     failed = [k for k, v in stages.items() if v["status"] == "failed"]
-    incomplete = bool(failed) or bool(brief.get("partial"))
-    if action_needed and isinstance(action_needed.get("decision"), bool):
+    partial = [k for k, v in stages.items() if v["status"] == "partial"]
+    incomplete = bool(failed or partial) or bool(brief.get("partial"))
+    ranking_gap = "rerank" in failed or "compare" in failed or "rerank" in partial
+    if action_needed and isinstance(action_needed.get("decision"), bool) and not (
+            ranking_gap and not action_needed["decision"]):
         action = "yes" if action_needed["decision"] else "no"
-    elif "rerank" in failed or "compare" in failed:
+    elif any((c.get("rank") or {}).get("label") == "act" for c in changes):
+        action = "yes"
+    elif ranking_gap:
         action = "unknown"
     else:
-        action = "yes" if any((c.get("rank") or {}).get("label") == "act" for c in changes) else "no"
-    return {"action": action, "complete": not incomplete, "failed_stages": failed,
+        action = "no"
+    return {"action": action, "complete": not incomplete, "failed_stages": failed, "partial_stages": partial,
             "relevant_changes": sum(1 for c in changes if relevant(c))}
 
 
@@ -194,26 +243,27 @@ def _verify_brief(client: Client, st: _Stages, old_text: str, new_text: str,
     if not texts:
         st.skip("verify", "nothing to verify")
         return {"lines": [], "rejected": [], "grounded": None, "verified": False, "partial": False}
-    res, err = _call(client, "grounding", verify.build_payload(old_text, new_text, texts))
+    res, err = st.call("verify", client, "grounding", verify.build_payload(old_text, new_text, texts))
     if not res:
         st.fail("verify", err, "brief is shown as NOT VERIFIED")
         v = verify.unverified(texts)
         return {"lines": _join(lines, v["claims"]), "rejected": [], "grounded": None, "verified": False,
                 "partial": False}
     v = verify.interpret(res[0], texts)
-    st.ok("verify", res[1], note=f"grounded {v['grounded']}")
+    st.ok("verify", note=f"grounded {v['grounded']}")
     rows = _join(lines, v["claims"])
 
-    bad = [i for i, r in enumerate(rows) if r["status"] == "rejected"]
+    bad = [i for i, r in enumerate(rows) if r["status"] in verify.PULLED]
     if bad and llm is not None:
         _repair(client, st, old_text, new_text, rows, bad, llm)
     else:
         st.skip("repair", "no rejected lines" if not bad else "no model available to rewrite them")
-    kept = [r for r in rows if r["status"] != "rejected"]
-    rejected = [r for r in rows if r["status"] == "rejected"]
+    kept = [r for r in rows if r["status"] not in verify.PULLED]
+    rejected = [r for r in rows if r["status"] in verify.PULLED]
     missing = sum(1 for r in kept if r["status"] == "unverified")
     if missing:  # Verify answered, but not for every line: say so instead of claiming a checked brief
         st.items["verify"]["note"] += f"; {missing} line(s) had no judgment"
+        st.items["verify"]["status"] = "partial"
     return {"lines": kept, "rejected": rejected, "grounded": v["grounded"], "verified": missing == 0,
             "partial": missing > 0}
 
@@ -238,7 +288,7 @@ def _repair(client: Client, st: _Stages, old_text: str, new_text: str, rows: lis
     if not todo:
         st.ok("repair", note=f"{len(fixes)} line(s) dropped")
         return
-    res, err = _call(client, "grounding", verify.build_payload(old_text, new_text, [t for _, t in todo]))
+    res, err = st.call("repair", client, "grounding", verify.build_payload(old_text, new_text, [t for _, t in todo]))
     if not res:
         st.fail("repair", err, "rewritten lines could not be re-verified, so they stay out")
         return
@@ -249,7 +299,7 @@ def _repair(client: Client, st: _Stages, old_text: str, new_text: str, rows: lis
             rows[i] = {**rows[i], **claim, "text": t, "repaired_from": original}
         else:
             rows[i]["repair"] = "rewrite was rejected again"
-    st.ok("repair", res[1], note=f"{len(todo)} line(s) rewritten and re-verified")
+    st.ok("repair", note=f"{len(todo)} line(s) rewritten and re-verified")
 
 
 def check_claims(old_text: str, new_text: str, claims: list[str], *, client: Client) -> dict[str, Any]:
@@ -259,17 +309,20 @@ def check_claims(old_text: str, new_text: str, claims: list[str], *, client: Cli
     depends on which other claims were pasted with it.
     """
     _check_inputs(old_text, new_text)
-    claims = [c.strip() for c in claims if c and c.strip()][:verify.MAX_CLAIMS]
+    claims = [c.strip() for c in claims if c and c.strip()]
     if not claims:
         raise InputError("enter at least one claim")
+    if len(claims) > MAX_CHECK_CLAIMS:  # refuse before spending anything, never drop claims silently
+        raise InputError(f"{len(claims)} claims pasted; check at most {MAX_CHECK_CLAIMS} at a time")
+    st = _Stages()
     with ThreadPoolExecutor(max_workers=4) as pool:
-        results = list(pool.map(lambda c: _call(client, "grounding", verify.build_payload(old_text, new_text, [c])),
-                                claims))
-    rows, credits = [], 0.0
+        results = list(pool.map(
+            lambda c: st.call("check", client, "grounding", verify.build_payload(old_text, new_text, [c])), claims))
+    rows = []
     for claim, (res, err) in zip(claims, results):
         if res:
             rows.append(verify.interpret(res[0], [claim])["claims"][0])
-            credits += res[1].credits
         else:
             rows.append({**verify.unverified([claim])["claims"][0], "error": str(err)})
-    return {"claims": rows, "usage": {"credits": round(credits, 2), "calls": len(claims)}}
+    return {"claims": rows, "usage": {"credits": round(sum(u.credits for u in st.usage), 2),
+                                      "calls": len(st.usage), "failed_calls": len(claims) - len(st.usage)}}

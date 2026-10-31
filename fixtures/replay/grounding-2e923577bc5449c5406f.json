@@ -2,11 +2,12 @@
  "endpoint": "grounding",
  "usage": {
   "endpoint": "grounding",
-  "credits": 4.0,
-  "cost_usd": 0.000797,
-  "model_ms": 91.3,
+  "credits": 3.0,
+  "cost_usd": 0.000598,
+  "model_ms": 61.8,
   "attempts": 1,
-  "replayed": false
+  "replayed": false,
+  "ledger_replay": false
  },
  "response": {
   "model": "clocked-1.0",
@@ -56,8 +57,8 @@
    "supported": 0.0082
   },
   "timing": {
-   "read_ms": 183,
-   "total_ms": 185
+   "read_ms": 66,
+   "total_ms": 67
   }
  }
 }

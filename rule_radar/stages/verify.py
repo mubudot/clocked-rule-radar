@@ -7,6 +7,7 @@ the only sources. A line is published only when the sources support it:
 - ``verified``  supported with probability >= VERIFIED
 - ``check``     supported, but below VERIFIED -> published with a "check" badge
 - ``rejected``  contradicted or not stated -> pulled out of the brief, evidence shown
+- ``not_a_claim`` Verify found nothing factual to check -> also kept out of the brief
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ INSTRUCTIONS = (
     "evidence is not proof that a claim is false; use not stated for it."
 )
 MAX_CLAIMS = 30
+PULLED = {"rejected", "not_a_claim"}   # statuses that never appear in the published brief
 
 
 def build_payload(old_text: str, new_text: str, claims: list[str], question: str | None = None) -> dict[str, Any]:
@@ -40,7 +42,7 @@ def classify(claim: dict[str, Any]) -> str:
     if claim.get("verdict") == "supported":
         return "verified" if (claim.get("supported") or 0) >= VERIFIED else "check"
     if claim.get("verdict") == "not_a_claim":
-        return "check"
+        return "not_a_claim"   # no factual support either way; never shown as "weakly supported"
     return "rejected"
 
 

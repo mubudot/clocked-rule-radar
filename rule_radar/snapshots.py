@@ -8,6 +8,7 @@ files you can read and diff; ``BASELINE`` names the last snapshot that was fully
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import sys
 import time
@@ -69,6 +70,12 @@ def fetch_text(url: str, timeout: float = 30.0) -> str:
     return html_to_text(raw) if "<" in raw[:2000] else raw
 
 
+def _atomic_write(path: Path, text: str) -> None:
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(text, "utf-8")
+    os.replace(tmp, path)
+
+
 def store_dir(root: Path, url: str) -> Path:
     slug = re.sub(r"[^a-z0-9]+", "-", url.lower().split("//", 1)[-1]).strip("-")[:60]
     return root / f"{slug}-{hashlib.sha256(url.encode()).hexdigest()[:8]}"
@@ -88,19 +95,22 @@ def watch(url: str, root: Path, *, client: Any, llm: Any = None, profile: dict |
     if snaps and snaps[-1].read_text("utf-8") == text:
         latest = snaps[-1]
     else:
-        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now()))
-        latest = d / f"{stamp}.txt"
-        latest.write_text(text, "utf-8")
+        t = now()
+        stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime(t)) + f".{int((t % 1) * 1e6):06d}Z"
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
+        latest = d / f"{stamp}-{digest}.txt"   # unique and immutable: never overwrites a snapshot
+        if not latest.exists():
+            _atomic_write(latest, text)
     base_name = pointer.read_text("utf-8").strip() if pointer.exists() else ""
     if not base_name or not (d / base_name).exists():
         if not snaps:
-            pointer.write_text(latest.name, "utf-8")
+            _atomic_write(pointer, latest.name)
             print(f"first snapshot saved ({len(text):,} characters); run again later to compare")
             return 0
         base_name = snaps[0].name
     baseline = d / base_name
     if baseline.read_text("utf-8") == text:
-        pointer.write_text(latest.name if latest.read_text("utf-8") == text else base_name, "utf-8")
+        _atomic_write(pointer, latest.name if latest.read_text("utf-8") == text else base_name)
         print(f"no change since {baseline.stem}")
         return 0
     try:
@@ -113,5 +123,5 @@ def watch(url: str, root: Path, *, client: Any, llm: Any = None, profile: dict |
     if code == EXIT_INCOMPLETE:
         print(f"\nassessment incomplete: keeping baseline {baseline.stem}; the same comparison runs next time")
     else:
-        pointer.write_text(latest.name, "utf-8")
+        _atomic_write(pointer, latest.name)
     return code

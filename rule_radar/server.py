@@ -107,6 +107,30 @@ def _profile(v: Any) -> dict[str, Any]:
             for k, x in list(v.items())[:20] if x not in (None, "")}
 
 
+LOCAL_NAMES = {"127.0.0.1", "localhost", "[::1]"}
+
+
+def _same_origin(host: str | None, origin: str | None, bound: tuple) -> bool:
+    """Paid Clocked work runs only for pages served by this app.
+
+    Host must name this server (blocks DNS rebinding) and, when the browser sends an
+    Origin, it must be this same origin (blocks a foreign page posting to localhost)."""
+    if not host:
+        return False
+    host_l = host.strip().lower()
+    m = re.fullmatch(r"(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::(\d{1,5}))?", host_l)
+    if not m:
+        return False
+    name, port = m.group(1), m.group(2)
+    bound_host, bound_port = str(bound[0]).lower(), bound[1]
+    wildcard = bound_host in ("0.0.0.0", "::", "")
+    if not wildcard and name not in LOCAL_NAMES | {bound_host, f"[{bound_host}]"}:
+        return False
+    if port is not None and int(port) != bound_port:
+        return False
+    return origin is None or origin.strip().lower() == f"http://{host_l}"
+
+
 def make_handler(app: App):
     class Handler(BaseHTTPRequestHandler):
         server_version = "RuleRadar/0.1"
@@ -156,8 +180,11 @@ def make_handler(app: App):
                 n = -1
             if n <= 0 or n > MAX_BODY:
                 return self._json(413 if n > MAX_BODY else 400, {"error": "request body missing or too large"})
-            if "application/json" not in (self.headers.get("Content-Type") or ""):
+            ctype = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+            if ctype != "application/json":
                 return self._json(415, {"error": "send application/json"})
+            if not _same_origin(self.headers.get("Host"), self.headers.get("Origin"), self.server.server_address):
+                return self._json(403, {"error": "cross-origin requests are not accepted"})
             try:
                 body = json.loads(self.rfile.read(n).decode("utf-8"))
                 if not isinstance(body, dict):

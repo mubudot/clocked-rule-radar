@@ -17,7 +17,8 @@ You get:
 - **Key facts with source spans**: Clocked **Extract** copies the deadline, prizes, team limit, video limit and
   repository rule from each version, word for word. Click a fact to see where it sits in the source text.
 - **A rumour checker**: paste what someone said on Discord ("the deadline was extended") and Verify answers
-  *supported*, *contradicted* or *not stated*, quoting the passage it used.
+  *supported*, *contradicted* or *not stated*, quoting the passage it used. Up to 20 claims at a time,
+  one Verify request each.
 
 Who it is for: hackathon entrants, and anyone else who has to follow rules that change, such as grant
 applicants, sellers on a marketplace or vendors on a tender. They read the rules once, at sign-up, and miss
@@ -96,7 +97,7 @@ python -m rule_radar watch https://example.com/hackathon/rules --profile me.json
 | --- | --- | --- | --- |
 | **Compare** `/compare` | Verify · Compare · Rerank | both versions, `evidence: "all"`, rules telling it that a changed date/amount/limit/condition counts as a conflict and a new version label does not | Its conflict and duplicate passages, with offsets in each version, are mapped onto the locally aligned clauses. An edit with a conflict becomes **material** and is ranked. An edit is **wording only**, and hidden by default, only when Compare's restated passages cover every changed part on both sides. In the sample, the reworded code-of-conduct sentence is wording only. An edit Compare says nothing about is **unconfirmed** and labelled "read it yourself". An added clause that conflicts with an old one is linked to it. |
 | **Rerank** `/rerank` | Verify · Compare · Rerank | each non-cosmetic change as a passage ("Before: … Now: …"), the entrant profile as `context`, and one `questions` entry | `action` and `reason` set the label and the order. `use` → *Act on this*, `expand` → *Read the section*, `skip/different_case` → *Not your case*, `skip/unrelated` → *Low impact*. *Not your case* changes never reach the brief, and neither do the Extract facts inside them. The Decide answer `action_needed` drives the "Action needed: Yes/No" banner. |
-| **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with the quoted evidence. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
+| **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with the quoted evidence. `not_a_claim` (nothing factual to check) is also kept out of the brief and labelled as such. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
 | **Extract** `/extract` | Decide · Extract · Fill | each version, 11 named fields (deadline, building period, winners date, prize pool, top prize, team size, video limit, repository rule, existing-work rule, excluded residents, payout) | Verbatim values and offsets feed the key-facts table and the source highlighter. They are also the facts the model is allowed to use. A `null` value is shown as *not stated*, never guessed. A read below 0.6 confidence is flagged *low confidence, check*. |
 
 A typical scan of the sample takes 5 Clocked calls and about 45 credits. The pipeline view in the UI shows
@@ -119,6 +120,17 @@ the credits and model time of every stage, read from the `X-Clocked-*` response 
   - Model down → a template brief is used, and the repair step is skipped.
   - Verify down → the brief is shown, marked **NOT VERIFIED** in red. If Verify answers for only some
     lines, the brief is marked **PARTLY VERIFIED**.
+  - A stage that runs only in part is shown as **partial**, and the run is marked incomplete (exit code 4):
+    Rerank returns no judgment (or an action the app does not know) for some change, a change is too
+    long to rank in full, or Verify judges only some lines. A partial ranking can still say "Yes, act",
+    but it never gives an all-clear: "No" becomes **Unknown**.
+  - The model's brief arrives but is not valid JSON → it is asked once more, then the template is used.
+  - Credits are counted per successful call, so a stage that half-failed still shows what it spent.
+- **Local server safety**: `/api/*` POSTs must be `Content-Type: application/json`, the `Host` must be this
+  server, and a browser `Origin` must be the same origin. A web page on another site cannot make your
+  local server spend Clocked credits.
+- **Ledger replays**: a response with `X-Clocked-Transport: replay` came from Clocked's idempotency ledger,
+  not a fresh model read; the report counts these separately.
 - **Concurrency**: the web server shares one budget of 4 concurrent Clocked requests across all open scans.
   This matches the limit of an account with the hackathon code. More than 256 changes are ranked in
   several Rerank requests. A change too long for one Rerank passage is ranked on a shortened passage that
@@ -142,17 +154,19 @@ rule_radar/
   pipeline.py          orchestration, per-stage status and fallbacks
   server.py, web/      stdlib HTTP server + vanilla JS UI (strict CSP, no external assets)
   snapshots.py         `watch` command: fetch → text snapshot → analyze
-tests/                 93 tests (pytest); no network needed
+tests/                 115 tests (pytest); no network needed
 ```
 
 Run the tests with `pip install pytest && python -m pytest -q`.
 
 ## Limitations
 
-- Verify measures support in the two versions you give it, not truth in the world. It can also be wrong.
-  With the template brief it has rejected true lines such as "Demo video limit changed from no longer than
-  five minutes to no longer than three minutes". That is why pulled lines stay visible with their evidence,
-  are never silently deleted, and get one model rewrite when a model is configured.
+- Verify measures support in the two versions you give it, not truth in the world. It can also be wrong,
+  and its scores vary between runs. In live runs it has rejected a true template line ("Demo video limit
+  changed from no longer than five minutes to no longer than three minutes"). The template now states both
+  sides explicitly ("the old rules said …; the new rules say …"), which Verify judges more reliably, and
+  pulled lines stay visible with their evidence, are never silently deleted, and get one model rewrite
+  when a model is configured.
 - The watcher reads static HTML. Rules pages that are rendered by JavaScript need their text pasted in.
 - Replay mode only covers the bundled sample. Any other text needs a key.
 

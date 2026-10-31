@@ -43,33 +43,65 @@ def _clip(text: str, limit: int) -> tuple[str, bool]:
     return (text, False) if len(text) <= limit else (text[: limit - 1] + "\u2026", True)
 
 
-def passage(change: dict[str, Any]) -> tuple[str, bool]:
-    """Passage text for one change, and whether it had to be shortened to fit."""
+def _window(text: str, lo: int, hi: int, size: int) -> tuple[str, bool]:
+    """A slice of at most ``size`` characters that keeps text[lo:hi] (the changed part) in view.
+    Returns (slice, lossy) where lossy means part of the changed region itself did not fit."""
+    if len(text) <= size:
+        return text, False
+    keep = size - 2                       # room for the two ellipses
+    if hi - lo >= keep:
+        return ("\u2026" if lo else "") + text[lo:lo + keep] + "\u2026", True
+    start = max(0, min(lo - (keep - (hi - lo)) // 2, len(text) - keep))
+    out = text[start:start + keep]
+    return ("\u2026" if start else "") + out + ("\u2026" if start + keep < len(text) else ""), False
+
+
+def _diff_bounds(a: str, b: str) -> tuple[int, int, int]:
+    """Common prefix length and the end of the differing region in a and in b."""
+    p = 0
+    while p < min(len(a), len(b)) and a[p] == b[p]:
+        p += 1
+    s = 0
+    while s < min(len(a), len(b)) - p and a[-1 - s] == b[-1 - s]:
+        s += 1
+    return p, len(a) - s, len(b) - s
+
+
+def passage(change: dict[str, Any]) -> tuple[str, bool, bool]:
+    """Passage text for one change, whether it was shortened to fit, and whether the
+    shortening lost part of what changed (then the ranking cannot be trusted as complete)."""
     old, new = change.get("old"), change.get("new")
     if change["status"] == "edited":
         full = f"Changed rule. Before: {old['text']} Now: {new['text']}"
         if len(full) <= MAX_PASSAGE:
-            return full, False
-        o, _ = _clip(old["text"], SIDE)   # keep both sides instead of cutting off the new text
-        n, _ = _clip(new["text"], SIDE)
-        return f"Changed rule. Before: {o} Now: {n}", True
+            return full, False, False
+        # keep both sides, each windowed on the part that differs (not on the shared beginning)
+        p, end_o, end_n = _diff_bounds(old["text"], new["text"])
+        o, lost_o = _window(old["text"], p, end_o, SIDE)
+        n, lost_n = _window(new["text"], p, end_n, SIDE)
+        return f"Changed rule. Before: {o} Now: {n}", True, lost_o or lost_n
     if change["status"] == "added":
-        return _clip(f"New rule: {new['text']}", MAX_PASSAGE)
-    return _clip(f"Removed rule: {old['text']}", MAX_PASSAGE)
+        text, cut = _clip(f"New rule: {new['text']}", MAX_PASSAGE)
+    else:
+        text, cut = _clip(f"Removed rule: {old['text']}", MAX_PASSAGE)
+    return text, cut, cut   # the whole clause is the change, so any cut loses part of it
 
 
 def build_payloads(changes: list[dict[str, Any]], profile: dict[str, Any] | None,
-                   query: str | None = None) -> tuple[list[dict[str, Any]], set[str]]:
+                   query: str | None = None) -> tuple[list[dict[str, Any]], set[str], set[str]]:
     """One payload per 256 changes (every change is ranked), plus the ids of shortened passages.
     The yes/no action question is asked only when everything fits in one request, because an
-    answer over part of the changes would be a partial answer."""
-    docs, shortened = [], set()
+    answer over part of the changes would be a partial answer. Also returns the ids whose
+    shortened passage lost part of the change itself."""
+    docs, shortened, lossy = [], set(), set()
     for c in changes:
         if c["materiality"] not in RANKABLE:
             continue
-        text, cut = passage(c)
+        text, cut, lost = passage(c)
         if cut:
             shortened.add(c["id"])
+        if lost:
+            lossy.add(c["id"])
         docs.append({"id": c["id"], "title": c["section"][:500] or "Rules", "text": text,
                      "metadata": {"change": c["status"], "materiality": c["materiality"]}})
     ctx = {k: v for k, v in (profile or {}).items() if v not in (None, "", [])}
@@ -83,12 +115,12 @@ def build_payloads(changes: list[dict[str, Any]], profile: dict[str, Any] | None
         if ctx:
             p["context"] = ctx
         payloads.append(p)
-    return payloads, shortened
+    return payloads, shortened, lossy
 
 
 def build_payload(changes: list[dict[str, Any]], profile: dict[str, Any] | None,
                   query: str | None = None) -> dict[str, Any] | None:
-    payloads, _ = build_payloads(changes, profile, query)
+    payloads, _, _ = build_payloads(changes, profile, query)
     return payloads[0] if payloads else None
 
 
@@ -99,7 +131,11 @@ def interpret(resp: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str
         if not rid:
             continue
         action, reason = r.get("action"), r.get("reason")
-        label = LABELS.get((action, reason if action == "skip" else None), "low_impact")
+        label = LABELS.get((action, reason if action == "skip" else None))
+        if label is None:
+            if action != "skip":
+                continue          # an action we do not understand is not a judgment: leave it unranked
+            label = "low_impact"  # skip with a reason we do not map: still "not something to act on"
         ranks[rid] = {"position": pos, "action": action, "reason": reason, "label": label,
                       "relevance": r.get("relevance_score"), "document_score": r.get("document_score"),
                       "levels": r.get("levels")}

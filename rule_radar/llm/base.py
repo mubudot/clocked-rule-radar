@@ -17,7 +17,12 @@ from typing import Any, Callable, Protocol
 
 
 class LLMError(Exception):
-    pass
+    """The model gave no usable answer. ``retryable`` marks a reply that arrived but could not be
+    parsed (worth one more try); an unreachable or failing endpoint is not retried."""
+
+    def __init__(self, message: str, *, retryable: bool = False):
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class LLM(Protocol):

@@ -76,22 +76,33 @@ def _span(p: dict | None) -> tuple[int, int] | None:
 
 
 def _cosmetic(ch: Change, restated: list) -> bool:
-    """An edit is wording-only when restated passages cover every changed part on both sides."""
+    """An edit is wording-only when restated passages cover every changed part on both sides.
+
+    Only findings that pair *this* old clause with *this* new clause count: a passage that
+    restates some other clause (say, the same date in another rule) proves nothing here."""
     o_ranges, n_ranges = _changed_ranges(ch.old, ch.new)  # type: ignore[arg-type]
-    o_spans = [sp for n in restated if (sp := _span(n[1].get("old")))]
-    n_spans = [sp for n in restated if (sp := _span(n[1].get("new")))]
-    return _covered(o_ranges, o_spans) and _covered(n_ranges, n_spans)
+    paired = []
+    for n in restated:
+        o, nw = _span(n[1].get("old")), _span(n[1].get("new"))
+        if o and nw and ch.old.overlaps(*o) and ch.new.overlaps(*nw):  # type: ignore[union-attr]
+            paired.append((o, nw))
+    if not paired:
+        return False
+    return _covered(o_ranges, [p[0] for p in paired]) and _covered(n_ranges, [p[1] for p in paired])
 
 
 def _findings(resp: dict[str, Any]) -> list[tuple[str, dict]]:
     out = []
     for pair in resp.get("pairs") or []:
         swap = pair.get("a") == "new" and pair.get("b") == "old"
-        for bucket, rel in (("conflicts", "conflict"), ("duplicates", "restated")):
+        for bucket, base_rel in (("conflicts", "conflict"), ("duplicates", "restated")):
             for f in pair.get(bucket) or []:
+                if not isinstance(f, dict):
+                    continue
                 a, b = f.get("a"), f.get("b")
                 if swap:
                     a, b = b, a
+                rel = base_rel
                 if rel == "restated" and f.get("kind") not in RESTATED_KINDS:
                     rel = "related"   # elaborated/different: same topic, not proof of same meaning
                 out.append((rel, {"kind": f.get("kind"), "confidence": f.get("confidence"),

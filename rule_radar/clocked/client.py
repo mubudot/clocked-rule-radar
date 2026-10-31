@@ -58,12 +58,13 @@ class Usage:
     cost_usd: float = 0.0
     model_ms: float = 0.0
     attempts: int = 1
-    replayed: bool = False
+    replayed: bool = False        # served from this repo's recordings (fixtures/replay), not the API
+    ledger_replay: bool = False   # X-Clocked-Transport: replay -> Clocked answered from its ledger
 
     def as_dict(self) -> dict[str, Any]:
         return {"endpoint": self.endpoint, "credits": self.credits, "cost_usd": self.cost_usd,
                 "model_ms": round(self.model_ms, 1), "attempts": self.attempts,
-                "replayed": self.replayed}
+                "replayed": self.replayed, "ledger_replay": self.ledger_replay}
 
 
 @dataclass
@@ -141,7 +142,7 @@ class ClockedClient:
                     h = raw.headers
                     usage = Usage(endpoint, _num(h.get("x-clocked-credits")),
                                   _num(h.get("x-clocked-cost-usd")), _num(h.get("x-clocked-model-ms")),
-                                  attempt, replayed=h.get("x-radar-replay") == "1")
+                                  attempt, ledger_replay=(h.get("x-clocked-transport") or "").strip().lower() == "replay")
                     self.usage_log.append(usage)
                     return data, usage
                 msg, retry_as_new = _error_detail(raw)

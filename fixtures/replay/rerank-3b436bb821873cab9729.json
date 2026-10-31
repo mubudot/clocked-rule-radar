@@ -4,9 +4,10 @@
   "endpoint": "rerank",
   "credits": 3.0,
   "cost_usd": 0.000598,
-  "model_ms": 67.6,
+  "model_ms": 66.0,
   "attempts": 1,
-  "replayed": false
+  "replayed": false,
+  "ledger_replay": false
  },
  "response": {
   "model": "clocked-1.0",
@@ -210,10 +211,10 @@
    "input_tokens": 2709
   },
   "timing": {
-   "total_ms": 92,
-   "rerank_ms": 58,
-   "questions_ms": 16,
-   "model_ms": 67,
+   "total_ms": 88,
+   "rerank_ms": 55,
+   "questions_ms": 15,
+   "model_ms": 65,
    "engine": {
     "rows": 3703,
     "branches": 14,
@@ -221,10 +222,10 @@
     "bins": 1,
     "bucket_rows": 4096,
     "long": 0,
-    "total_ms": 54,
+    "total_ms": 52,
     "build_ms": 0,
     "doc_ms": 0,
-    "forward_ms": 53,
+    "forward_ms": 52,
     "state_ms": 0,
     "logits_ms": 0,
     "state_chars": 0,

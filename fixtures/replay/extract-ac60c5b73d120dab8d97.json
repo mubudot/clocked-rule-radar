@@ -4,9 +4,10 @@
   "endpoint": "extract",
   "credits": 6.0,
   "cost_usd": 0.001195,
-  "model_ms": 149.6,
+  "model_ms": 147.1,
   "attempts": 1,
-  "replayed": false
+  "replayed": false,
+  "ledger_replay": false
  },
  "response": {
   "model": "clocked-1.0",
@@ -96,7 +97,7 @@
    }
   },
   "timing": {
-   "read_ms": 149,
+   "read_ms": 146,
    "forwards": {
     "fields": [
      7,
@@ -108,14 +109,14 @@
      "reader": "recognition",
      "doc": 0,
      "branches": 2,
-     "generate": 101,
+     "generate": 99,
      "locate": 0,
      "verify": 44,
      "assemble": 0
     }
    },
-   "total_ms": 149,
-   "server_ms": 263
+   "total_ms": 146,
+   "server_ms": 264
   }
  }
 }

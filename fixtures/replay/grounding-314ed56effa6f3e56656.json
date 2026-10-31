@@ -1,0 +1,232 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 11.0,
+  "cost_usd": 0.002191,
+  "model_ms": 259.8,
+  "attempts": 1,
+  "replayed": false,
+  "ledger_replay": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.8926,
+  "ungrounded": 0.1074,
+  "verdict": "grounded",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.9593,
+    "share_of_answer": 0.8563,
+    "claims": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.0407,
+    "share_of_answer": 0.0363,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "New rule in 4. What to submit: Private repositories are not accepted.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0621,
+    "supported": 0.9933,
+    "contradicted": 0.0032,
+    "not_stated": 0.0015,
+    "not_a_claim": 0.002,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0013,
+     "new": 0.9987
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Private repositories are not accepted.",
+     "start": 803,
+     "end": 841,
+     "confidence": 0.99
+    }
+   },
+   {
+    "claim": "Demo video limit: the old rules said “no longer than five minutes”; the new rules say “no longer than three minutes”.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1053,
+    "supported": 0.6617,
+    "contradicted": 0.082,
+    "not_stated": 0.1263,
+    "not_a_claim": 0.1301,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.1759,
+     "new": 0.8241
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "a demo video no longer than five minutes.",
+     "start": 658,
+     "end": 699,
+     "confidence": 0.959
+    }
+   },
+   {
+    "claim": "Repository rule: the old rules said “The repository may be public or private; if private, share it with judges@northwind.example”; the new rules say “a link to a public source repository with its full commit history”.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1953,
+    "supported": 0.8774,
+    "contradicted": 0.0654,
+    "not_stated": 0.0309,
+    "not_a_claim": 0.0264,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.043,
+     "new": 0.957
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "The repository may be public or private; if private, share it with judges@northwind.example.",
+     "start": 700,
+     "end": 792,
+     "confidence": 0.999
+    }
+   },
+   {
+    "claim": "Top prize: the old rules said “$5,000”; the new rules say “$6,000”.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0603,
+    "supported": 0.8864,
+    "contradicted": 0.0626,
+    "not_stated": 0.0274,
+    "not_a_claim": 0.0236,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0285,
+     "new": 0.9715
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "First place receives $5,000, second place receives $3,000, and third place receives $2,000.",
+     "start": 840,
+     "end": 931,
+     "confidence": 0.783
+    }
+   },
+   {
+    "claim": "5. Prizes: now “First place receives $6,000, second place receives $2,500, and third place receives $1,500.” (was “First place receives $5,000, second place receives $3,000, and third place receives $2,000.”)",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1872,
+    "supported": 0.9472,
+    "contradicted": 0.0259,
+    "not_stated": 0.0135,
+    "not_a_claim": 0.0134,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0157,
+     "new": 0.9843
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "First place receives $5,000, second place receives $3,000, and third place receives $2,000.",
+     "start": 840,
+     "end": 931,
+     "confidence": 1
+    }
+   },
+   {
+    "claim": "Submission deadline: the old rules said “November 20, 2026 at 11:59 p.m. Pacific Time”; the new rules say “November 14, 2026 at 11:59 p.m. Pacific Time”.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1377,
+    "supported": 0.8937,
+    "contradicted": 0.0535,
+    "not_stated": 0.0288,
+    "not_a_claim": 0.024,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0556,
+     "new": 0.9444
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Prize payout: the old rules said “bank transfer”; the new rules say “through Wise”.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0747,
+    "supported": 0.9016,
+    "contradicted": 0.0452,
+    "not_stated": 0.0268,
+    "not_a_claim": 0.0264,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0415,
+     "new": 0.9585
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "Prizes",
+     "start": 800,
+     "end": 806,
+     "confidence": 0.997
+    }
+   },
+   {
+    "claim": "5. Prizes: now “Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.” (was “Prizes are paid by bank transfer within 30 days of verification.”)",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1773,
+    "supported": 0.9513,
+    "contradicted": 0.0234,
+    "not_stated": 0.0131,
+    "not_a_claim": 0.0122,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0157,
+     "new": 0.9843
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.",
+     "start": 981,
+     "end": 1088,
+     "confidence": 1
+    }
+   }
+  ],
+  "unsupported_claims": [],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 1,
+   "supported": 0.6617
+  },
+  "timing": {
+   "read_ms": 267,
+   "total_ms": 269
+  }
+ }
+}

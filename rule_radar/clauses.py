@@ -19,6 +19,12 @@ TIME_ZONE_WORDS = {"pacific", "eastern", "central", "mountain", "et", "pt", "ct"
                    "anywhere", "local", "time", "on", "in", "at"}
 _HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")
 _NUMBERED_HEADING = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|[IVX]+\.|Section\s+\d+[.:]?)\s+([A-Z][^.!?]{0,80})$")
+# Words that make a numbered line a rule ("1. Teams must be public"), not a section title ("1. Teams").
+_RULE_WORDS = re.compile(
+    r"\b(must|may|shall|should|will|can|cannot|can't|won't|need|needs|is|are|was|were|be|been|being|"
+    r"has|have|had|do|does|not|no|only|never|always|allowed|required|requires|require|accepted|"
+    r"eligible|ineligible|close|closes|open|opens|runs|run|receive|receives|submit|submitted|"
+    r"start|starts|end|ends|apply|applies|get|gets|win|wins|pay|paid|pays)\b", re.I)
 _BULLET = re.compile(r"^\s*(?:[-*\u2022]|\(?[a-z0-9]{1,3}[.)])\s+")
 _SECTION_NUM = re.compile(r"^\s*(?:section\s+)?(?:\d+(?:\.\d+)*\.?|[ivx]+\.)\s*", re.I)
 
@@ -82,6 +88,9 @@ def _is_numbered_heading(stripped: str, next_line: str) -> bool:
         return False
     if len(stripped.split()) > 7:
         return False
+    title = _NUMBERED_HEADING.match(stripped).group(2)
+    if _RULE_WORDS.search(title) or re.search(r"\d", title):
+        return False  # reads as a rule or carries a value -> keep it as a clause
     nxt = next_line.strip()
     # a heading is followed by body text or a bullet list, not by the next numbered item
     return bool(nxt) and not re.match(r"\s*\(?\d+(?:\.\d+)*[.)]?\s", next_line)
