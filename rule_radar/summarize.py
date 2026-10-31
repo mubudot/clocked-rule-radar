@@ -45,7 +45,8 @@ def _field_changes(fields: list[dict[str, Any]], changes: list[dict[str, Any]]) 
                 cl, read = c.get(side), f.get(side)
                 if not cl or not read:
                     continue
-                if any(cl["start"] <= a and b <= cl["end"] for a, b in read.get("spans") or []):
+                # any overlap counts: a span that crosses two clauses belongs to both of them
+                if any(a < cl["end"] and cl["start"] < b for a, b in read.get("spans") or []):
                     ids.append(c["id"])
                     break
         out[f["name"]] = ids

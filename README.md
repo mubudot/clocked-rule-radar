@@ -154,7 +154,7 @@ rule_radar/
   pipeline.py          orchestration, per-stage status and fallbacks
   server.py, web/      stdlib HTTP server + vanilla JS UI (strict CSP, no external assets)
   snapshots.py         `watch` command: fetch → text snapshot → analyze
-tests/                 115 tests (pytest); no network needed
+tests/                 119 tests (pytest); no network needed
 ```
 
 Run the tests with `pip install pytest && python -m pytest -q`.
@@ -167,6 +167,9 @@ Run the tests with `pip install pytest && python -m pytest -q`.
   sides explicitly ("the old rules said …; the new rules say …"), which Verify judges more reliably, and
   pulled lines stay visible with their evidence, are never silently deleted, and get one model rewrite
   when a model is configured.
+- A plain numbered line such as "1. Teams" or "1. Videos under five minutes" both names its section and is
+  kept as a clause, because no rule can tell a title from a short rule reliably. A renamed title therefore
+  shows up as a change to read; a changed short rule is never lost.
 - The watcher reads static HTML. Rules pages that are rendered by JavaScript need their text pasted in.
 - Replay mode only covers the bundled sample. Any other text needs a key.
 

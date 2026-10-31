@@ -19,7 +19,7 @@ def test_numbered_rules_are_clauses_not_headings():
     cl = split_clauses("1. Teams must be public\n2. Videos under three minutes\n", "new")
     assert [c.text for c in cl] == ["Teams must be public", "Videos under three minutes"]
     cl = split_clauses("1. Prizes\nFirst place gets $500.\n", "new")
-    assert [(c.section, c.text) for c in cl] == [("1. Prizes", "First place gets $500.")]
+    assert [(c.section, c.text) for c in cl] == [("1. Prizes", "1. Prizes"), ("1. Prizes", "First place gets $500.")]
 
 
 def test_closing_quote_and_sentence_final_pm():

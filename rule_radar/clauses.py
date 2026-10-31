@@ -123,6 +123,14 @@ def split_clauses(doc: str, version: str) -> list[Clause]:
             section = (h.group(2) if h else stripped).strip()
             sec_idx += 1
             clause_idx = 0
+            if not h:
+                # A numbered line can be a title ("1. Teams") or a short rule ("1. Videos under five
+                # minutes"); no word list tells them apart reliably. So it names the section *and* stays
+                # a clause: an unchanged title aligns as unchanged, a changed one is a change to check.
+                s0 = pos + (len(line) - len(line.lstrip()))
+                e0 = pos + len(line.rstrip())
+                clause_idx += 1
+                clauses.append(Clause(f"{version}:{sec_idx}.{clause_idx}", version, section, doc[s0:e0], s0, e0))
         elif not stripped:
             flush(pos)
         elif _BULLET.match(line):

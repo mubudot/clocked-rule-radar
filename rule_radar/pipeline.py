@@ -293,13 +293,20 @@ def _repair(client: Client, st: _Stages, old_text: str, new_text: str, rows: lis
         st.fail("repair", err, "rewritten lines could not be re-verified, so they stay out")
         return
     v = verify.interpret(res[0], [t for _, t in todo])
+    unjudged = 0
     for (i, t), claim in zip(todo, v["claims"]):
         original = rows[i]["claim"]
         if claim["status"] in ("verified", "check"):
             rows[i] = {**rows[i], **claim, "text": t, "repaired_from": original}
+        elif claim["status"] == "unverified":
+            unjudged += 1   # Verify gave no judgment: the rewrite stays out, and the run is not complete
+            rows[i]["repair"] = "rewrite got no judgment from Verify, so it stays out"
         else:
             rows[i]["repair"] = "rewrite was rejected again"
-    st.ok("repair", note=f"{len(todo)} line(s) rewritten and re-verified")
+    note = f"{len(todo)} line(s) rewritten and re-verified"
+    if unjudged:
+        note += f"; {unjudged} rewrite(s) had no judgment"
+    st.ok("repair", note=note, partial=bool(unjudged))
 
 
 def check_claims(old_text: str, new_text: str, claims: list[str], *, client: Client) -> dict[str, Any]:

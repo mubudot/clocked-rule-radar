@@ -237,3 +237,41 @@ def test_unparseable_model_reply_is_retried_once():
     rep = analyze(OLD, NEW, client=c, llm=llm)
     assert rep["brief"]["source"] == "fake:model" and len(llm.prompts) == 2
     assert "first reply unusable" in rep["stages"]["brief"]["note"]
+
+
+# --- round 3 -----------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("old,new", [
+    ("1. Videos under five minutes\nUpload via the portal.\n", "1. Videos under three minutes\nUpload via the portal.\n"),
+    ("Deadline: Friday\nSend it.\n", "Deadline: Monday\nSend it.\n"),
+])
+def test_short_numbered_or_labelled_rules_never_vanish(old, new):
+    assert any(c.status == "edited" for c in align(split_clauses(old, "old"), split_clauses(new, "new")))
+
+
+def test_field_span_crossing_an_excluded_clause_is_left_out():
+    a = {"id": "new:1.1", "status": "added", "materiality": "new", "section": "E", "rank": {"label": "act"},
+         "new": {"text": "Only new projects.", "start": 0, "end": 18}}
+    b = {"id": "new:1.2", "status": "added", "materiality": "new", "section": "E",
+         "rank": {"label": "not_your_case"}, "new": {"text": "Old ones are out.", "start": 19, "end": 36}}
+    field = {"name": "existing_work_rule", "label": "Existing-work rule", "status": "added", "old": None,
+             "new": {"value": "Only new projects. Old ones are out.", "spans": [[0, 36]]}}
+    assert summarize._facts([a, b], [field])["key_facts"] == []
+
+
+def test_repair_without_a_judgment_makes_the_run_incomplete():
+    calls = {"n": 0}
+
+    def grounding(p):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"claims": [{"verdict": "contradicted", "supported": 0.1}]}
+        return {"claims": []}          # the re-check answers nothing
+    c = FakeClient({"compare": {"pairs": []}, "extract": {"fields": {}},
+                    "rerank": lambda p: {"results": [{"id": d["id"], "action": "use"} for d in p["documents"]]},
+                    "grounding": grounding})
+    llm = FakeLLM([json.dumps({"lines": [{"text": "Teams of four.", "change_ids": []}]}),
+                   json.dumps({"lines": [{"index": 0, "text": "Teams of up to four."}]})])
+    rep = analyze(OLD, NEW, client=c, llm=llm)
+    assert rep["stages"]["repair"]["status"] == "partial"
+    assert rep["assessment"]["complete"] is False and exit_code(rep) == 4

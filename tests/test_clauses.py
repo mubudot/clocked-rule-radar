@@ -22,8 +22,11 @@ def test_sentence_after_year_is_split():
 def test_plain_numbered_headings_and_bullets():
     doc = "1. Prizes\nFirst place gets $500.\n\n2. Eligibility\n- Must be 18 or older.\n- One entry per person.\n"
     cl = split_clauses(doc, "new")
-    assert [c.section for c in cl] == ["1. Prizes", "2. Eligibility", "2. Eligibility"]
-    assert cl[1].text == "Must be 18 or older."
+    # a plain numbered title names its section and is also kept as a clause (see clauses.py)
+    body = [c for c in cl if c.text not in ("1. Prizes", "2. Eligibility")]
+    assert [c.section for c in body] == ["1. Prizes", "2. Eligibility", "2. Eligibility"]
+    assert body[1].text == "Must be 18 or older."
+    assert [c.text for c in cl if c.text[0].isdigit()] == ["1. Prizes", "2. Eligibility"]
 
 
 def test_headings_are_not_clauses():
