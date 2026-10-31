@@ -124,11 +124,13 @@ class ClockedClient:
         }
         url = f"{self.base_url}/{endpoint}"
         last: ClockedError | None = None
+        unknown = False   # an earlier attempt may still be running on the server
         for attempt in range(1, self.max_attempts + 1):
             try:
                 raw = self.transport(url, body, headers, self.timeout)
             except (urllib.error.URLError, TimeoutError, OSError) as e:
                 last = ClockedError(f"network error: {e}", endpoint=endpoint, request_id=request_id)
+                unknown = True
             else:
                 if 200 <= raw.status < 300:
                     try:
@@ -145,8 +147,14 @@ class ClockedClient:
                 msg, retry_as_new = _error_detail(raw)
                 last = ClockedError(f"{endpoint} returned HTTP {raw.status}: {msg}", status=raw.status,
                                     endpoint=endpoint, retry_as_new=retry_as_new, request_id=request_id)
-                if retry_as_new or raw.status not in RETRYABLE:
+                if retry_as_new:
                     raise last
+                if raw.status == 409 and unknown:
+                    pass  # same key, same payload: the first attempt is still running -> wait and ask again
+                elif raw.status not in RETRYABLE:
+                    raise last
+                else:
+                    unknown = unknown or raw.status >= 500
             if attempt < self.max_attempts:
                 delay = self.backoff * (2 ** (attempt - 1))
                 self.sleep(delay + random.uniform(0, delay / 2))

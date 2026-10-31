@@ -1,7 +1,9 @@
 """Watch a rules page: save a text snapshot, and analyze it against the previous one.
 
-Run it from cron or CI. Exit codes: 0 = no change, 3 = material change found,
-2 = fetch or input error. Snapshots are plain text files you can read and diff.
+Run it from cron or CI. Exit codes: 0 = nothing relevant changed, 3 = relevant changes,
+4 = assessment incomplete (a Clocked stage failed; the baseline is kept and the same
+comparison runs again next time), 2 = fetch or input error. Snapshots are plain text
+files you can read and diff; ``BASELINE`` names the last snapshot that was fully analysed.
 """
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from .pipeline import analyze
+from .pipeline import EXIT_INCOMPLETE, InputError, analyze, exit_code
 from .report_text import render
 
 BLOCK = {"p", "div", "li", "tr", "br", "section", "article", "table", "ul", "ol"}
@@ -81,15 +83,35 @@ def watch(url: str, root: Path, *, client: Any, llm: Any = None, profile: dict |
         return 2
     d = store_dir(root, url)
     d.mkdir(parents=True, exist_ok=True)
+    pointer = d / "BASELINE"
     snaps = sorted(d.glob("*.txt"))
     if snaps and snaps[-1].read_text("utf-8") == text:
-        print(f"no change since {snaps[-1].stem}")
+        latest = snaps[-1]
+    else:
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now()))
+        latest = d / f"{stamp}.txt"
+        latest.write_text(text, "utf-8")
+    base_name = pointer.read_text("utf-8").strip() if pointer.exists() else ""
+    if not base_name or not (d / base_name).exists():
+        if not snaps:
+            pointer.write_text(latest.name, "utf-8")
+            print(f"first snapshot saved ({len(text):,} characters); run again later to compare")
+            return 0
+        base_name = snaps[0].name
+    baseline = d / base_name
+    if baseline.read_text("utf-8") == text:
+        pointer.write_text(latest.name if latest.read_text("utf-8") == text else base_name, "utf-8")
+        print(f"no change since {baseline.stem}")
         return 0
-    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now()))
-    (d / f"{stamp}.txt").write_text(text, "utf-8")
-    if not snaps:
-        print(f"first snapshot saved ({len(text):,} characters); run again later to compare")
-        return 0
-    rep = analyze(snaps[-1].read_text("utf-8"), text, client=client, llm=llm, profile=profile)
+    try:
+        rep = analyze(baseline.read_text("utf-8"), text, client=client, llm=llm, profile=profile)
+    except InputError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     print(render(rep))
-    return 3 if rep["counts"].get("material") else 0
+    code = exit_code(rep)
+    if code == EXIT_INCOMPLETE:
+        print(f"\nassessment incomplete: keeping baseline {baseline.stem}; the same comparison runs next time")
+    else:
+        pointer.write_text(latest.name, "utf-8")
+    return code

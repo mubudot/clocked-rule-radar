@@ -22,7 +22,7 @@ Projects are scored on technical quality (40%), originality (30%), and usefulnes
 Only projects started during the building period are eligible. Earlier projects are not eligible, even with substantial changes.
 
 ## 8. Code of conduct
-Harassment of any participant leads to disqualification.
+Any participant who harasses another participant will be disqualified.
 
 ## 9. Community award
 A $500 community award goes to the project with the most votes on the Northwind forum. Voting is optional.

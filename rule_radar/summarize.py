@@ -28,20 +28,51 @@ REPAIR_SYSTEM = (
 )
 
 
+def _included(change: dict[str, Any]) -> bool:
+    """Changes the brief may talk about: not cosmetic, not a rule for someone else."""
+    return change["materiality"] != "wording" and (change.get("rank") or {}).get("label") != "not_your_case"
+
+
+def _field_changes(fields: list[dict[str, Any]], changes: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Field name -> ids of the changed clauses its Extract spans fall in."""
+    out: dict[str, list[str]] = {}
+    for f in fields:
+        if f["status"] not in ("changed", "added", "removed"):
+            continue
+        ids = []
+        for c in changes:
+            for side in ("old", "new"):
+                cl, read = c.get(side), f.get(side)
+                if not cl or not read:
+                    continue
+                if any(cl["start"] <= a and b <= cl["end"] for a, b in read.get("spans") or []):
+                    ids.append(c["id"])
+                    break
+        out[f["name"]] = ids
+    return out
+
+
+def _value(v: Any) -> Any:
+    v = ", ".join(map(str, v)) if isinstance(v, list) else v
+    return v.rstrip(" .") if isinstance(v, str) else v
+
+
+def _usable_fields(fields: list[dict[str, Any]], changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Changed fields that sit inside a change the brief may talk about (so Rerank's
+    'not your case' and Compare's 'wording only' apply to Extract facts too)."""
+    ok = {c["id"] for c in changes if _included(c)}
+    where = _field_changes(fields, changes)
+    return [{**f, "change_ids": [i for i in where[f["name"]] if i in ok]}
+            for f in fields if f["name"] in where and any(i in ok for i in where[f["name"]])]
+
+
 def _facts(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> dict[str, Any]:
-    rows = []
-    for c in changes:
-        if c["materiality"] == "wording":
-            continue
-        label = (c.get("rank") or {}).get("label")
-        if label == "not_your_case":
-            continue
-        rows.append({"id": c["id"], "section": c["section"], "change": c["status"],
-                     "priority": label or "unranked",
-                     "before": (c.get("old") or {}).get("text"), "now": (c.get("new") or {}).get("text")})
-    table = [{"field": f["label"], "status": f["status"],
-              "before": (f.get("old") or {}).get("value"), "now": (f.get("new") or {}).get("value")}
-             for f in fields if f["status"] in ("changed", "added", "removed")]
+    rows = [{"id": c["id"], "section": c["section"], "change": c["status"],
+             "priority": (c.get("rank") or {}).get("label") or "unranked",
+             "before": (c.get("old") or {}).get("text"), "now": (c.get("new") or {}).get("text")}
+            for c in changes if _included(c)]
+    table = [{"field": f["label"], "status": f["status"], "before": _value((f.get("old") or {}).get("value")),
+              "now": _value((f.get("new") or {}).get("value"))} for f in _usable_fields(fields, changes)]
     return {"changes": rows[:24], "key_facts": table}
 
 
@@ -56,28 +87,39 @@ def _parse_lines(text: str) -> list[dict[str, Any]]:
     lines = data.get("lines") if isinstance(data, dict) else None
     if not isinstance(lines, list):
         raise LLMError("model reply has no 'lines' list")
-    return lines
+    return [ln for ln in lines if isinstance(ln, dict)]
+
+
+def _clause_line(c: dict[str, Any]) -> str:
+    sec = c["section"] or "Rules"
+    if c["status"] == "edited":
+        return f"{sec}: now \u201c{c['new']['text']}\u201d (was \u201c{c['old']['text']}\u201d)"
+    if c["status"] == "added":
+        return f"New rule in {sec}: {c['new']['text']}"
+    return f"Removed from {sec}: {c['old']['text']}"
 
 
 def offline_brief(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Template brief used with no model, or when the model fails."""
+    """Template brief used with no model, or when the model fails: one line per change in ranked
+    order, using the Extract field wording when a changed field sits in that change."""
+    usable = _usable_fields(fields, changes)
     lines: list[dict[str, Any]] = []
-    for f in fields:
-        if f["status"] != "changed":
-            continue
-        o, n = f["old"]["value"], f["new"]["value"]
-        o = ", ".join(o) if isinstance(o, list) else o
-        n = ", ".join(n) if isinstance(n, list) else n
-        lines.append({"text": f"{f['label']} changed from {o} to {n}.", "change_ids": []})
+    used: set[str] = set()
     for c in changes:
         if len(lines) >= MAX_LINES:
             break
-        if c["materiality"] == "wording" or (c.get("rank") or {}).get("label") in ("not_your_case",):
+        if not _included(c):
             continue
-        if c["status"] == "added":
-            lines.append({"text": f"New rule in {c['section']}: {c['new']['text']}", "change_ids": [c["id"]]})
-        elif c["status"] == "removed":
-            lines.append({"text": f"Removed from {c['section']}: {c['old']['text']}", "change_ids": [c["id"]]})
+        mine = [f for f in usable if c["id"] in f["change_ids"] and f["name"] not in used]
+        for f in mine:
+            used.add(f["name"])
+            o, n = _value((f.get("old") or {}).get("value")), _value((f.get("new") or {}).get("value"))
+            text = (f"{f['label']} changed from {o} to {n}." if f["status"] == "changed" else
+                    f"{f['label']} is now stated: {n}." if f["status"] == "added" else
+                    f"{f['label']} is no longer stated (was {o}).")
+            lines.append({"text": text, "change_ids": f["change_ids"]})
+        if not mine and not any(c["id"] in f["change_ids"] for f in usable):
+            lines.append({"text": _clause_line(c), "change_ids": [c["id"]]})
     return lines[:MAX_LINES]
 
 
@@ -90,9 +132,10 @@ def write_brief(changes: list[dict[str, Any]], fields: list[dict[str, Any]],
     known = {c["id"] for c in changes}
     out = []
     for item in _parse_lines(reply)[:MAX_LINES]:
-        if not isinstance(item, dict) or not isinstance(item.get("text"), str) or not item["text"].strip():
+        if not isinstance(item.get("text"), str) or not item["text"].strip():
             continue
-        ids = [i for i in item.get("change_ids") or [] if isinstance(i, str) and i in known]
+        raw_ids = item.get("change_ids")
+        ids = [i for i in raw_ids if isinstance(i, str) and i in known] if isinstance(raw_ids, list) else []
         out.append({"text": item["text"].strip(), "change_ids": ids})
     if not out:
         raise LLMError("model returned no usable lines")
@@ -105,8 +148,9 @@ def repair(rejected: list[dict[str, Any]], llm: LLM) -> dict[int, str | None]:
     valid = {r["index"] for r in rejected}
     fixes: dict[int, str | None] = {}
     for item in _parse_lines(reply):
-        if not isinstance(item, dict) or item.get("index") not in valid:
+        idx = item.get("index")
+        if not isinstance(idx, int) or isinstance(idx, bool) or idx not in valid:
             continue
         t = item.get("text")
-        fixes[item["index"]] = t.strip() if isinstance(t, str) and t.strip() else None
+        fixes[idx] = t.strip() if isinstance(t, str) and t.strip() else None
     return fixes

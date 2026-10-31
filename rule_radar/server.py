@@ -54,18 +54,32 @@ def load_sample(name: str) -> dict[str, Any] | None:
             "claims": info.get("claims", [])}
 
 
+class GatedClient:
+    """Shares one concurrency budget across every request the server is handling."""
+
+    def __init__(self, inner: Any, gate: threading.BoundedSemaphore):
+        self.inner, self.gate = inner, gate
+
+    def call(self, endpoint: str, payload: dict[str, Any]):
+        with self.gate:
+            return self.inner.call(endpoint, payload)
+
+
 class App:
     """Holds settings and builds a fresh client per request (clients keep a usage log)."""
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, max_concurrent: int = 4):
         self.settings = settings
-        self.lock = threading.Semaphore(4)   # Clocked hackathon accounts allow 4 concurrent requests
+        # Clocked accounts with the hackathon code allow 4 requests at a time: one budget for all scans
+        self.gate = threading.BoundedSemaphore(max_concurrent)
+
+    def client(self) -> GatedClient:
+        return GatedClient(self.settings.clocked(), self.gate)
 
     def analyze(self, body: dict[str, Any]) -> dict[str, Any]:
-        with self.lock:
-            return analyze(_text(body, "old"), _text(body, "new"), client=self.settings.clocked(),
-                           llm=self.settings.model(), profile=_profile(body.get("profile")),
-                           query=body.get("query") if isinstance(body.get("query"), str) else None)
+        return analyze(_text(body, "old"), _text(body, "new"), client=self.client(),
+                       llm=self.settings.model(), profile=_profile(body.get("profile")),
+                       query=body.get("query") if isinstance(body.get("query"), str) else None)
 
     def check(self, body: dict[str, Any]) -> dict[str, Any]:
         claims = body.get("claims")
@@ -74,8 +88,7 @@ class App:
         claims = [c for c in claims if c.strip()]
         if not claims:
             raise InputError("enter at least one claim")
-        with self.lock:
-            return check_claims(_text(body, "old"), _text(body, "new"), claims, client=self.settings.clocked())
+        return check_claims(_text(body, "old"), _text(body, "new"), claims, client=self.client())
 
 
 def _text(body: dict[str, Any], key: str) -> str:

@@ -14,6 +14,9 @@ ABBREVIATIONS = {"a.m.", "p.m.", "e.g.", "i.e.", "u.s.", "u.k.", "etc.", "no.", 
                  "mrs.", "dr.", "st.", "inc.", "ltd.", "co.", "corp.", "vs.", "approx.", "art.",
                  "sec.", "fig.", "jan.", "feb.", "mar.", "apr.", "jun.", "jul.", "aug.", "sep.",
                  "sept.", "oct.", "nov.", "dec."}
+TIME_ZONE_WORDS = {"pacific", "eastern", "central", "mountain", "et", "pt", "ct", "mt", "edt", "est", "pdt", "pst",
+                   "cdt", "cst", "utc", "gmt", "cet", "cest", "bst", "ist", "jst", "kst", "aest", "aoe",
+                   "anywhere", "local", "time", "on", "in", "at"}
 _HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")
 _NUMBERED_HEADING = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|[IVX]+\.|Section\s+\d+[.:]?)\s+([A-Z][^.!?]{0,80})$")
 _BULLET = re.compile(r"^\s*(?:[-*\u2022]|\(?[a-z0-9]{1,3}[.)])\s+")
@@ -29,6 +32,9 @@ class Clause:
     start: int
     end: int
 
+    def contains(self, start: int, end: int) -> bool:
+        return self.start <= start and end <= self.end
+
     def overlaps(self, start: int, end: int) -> int:
         """Number of characters shared with [start, end)."""
         return max(0, min(self.end, end) - max(self.start, start))
@@ -39,17 +45,23 @@ class Clause:
 
 
 def _sentence_spans(text: str, base: int) -> list[tuple[int, int]]:
-    """Sentence boundaries inside one paragraph or list item."""
+    """Sentence boundaries inside one paragraph or list item (closing quotes stay with their sentence)."""
     spans, start = [], 0
-    for m in re.finditer(r"[.!?;](?=[\"')\]]?\s+[\"'(\[]?[A-Z0-9$])", text):
+    for m in re.finditer(r"[.!?;][\"')\]\u201d\u2019]*(?=\s+[\"'(\[\u201c\u2018]?([A-Za-z0-9$]+))", text):
         end = m.end()
-        token = text[:end].split()[-1].lower() if text[:end].split() else ""
-        token = token.lstrip("\"'([")
-        if token in ABBREVIATIONS or re.fullmatch(r"[a-z]\.", token):
+        nxt = m.group(1)
+        if not nxt[0].isupper() and not nxt[0].isdigit() and nxt[0] != "$":
             continue
-        if re.fullmatch(r"\d+(?:\.\d+)*\.", token) and len(text[start:end].split()) == 1:
+        words = text[start:end].split()
+        token = words[-1].lower().strip("\"')]\u201d\u2019([\u201c\u2018") if words else ""
+        if token in ("a.m.", "p.m."):
+            if nxt.lower() in TIME_ZONE_WORDS:
+                continue  # "11:59 p.m. Pacific Time" is one sentence; "5 p.m. Teams ..." is two
+        elif token in ABBREVIATIONS or re.fullmatch(r"[a-z]\.", token):
+            continue
+        if re.fullmatch(r"\d+(?:\.\d+)*\.", token) and len(words) == 1:
             continue  # list numbering such as "3. " at the start of a segment
-        if m.group(0) == ";" and len(text[start:end].strip()) < 25:
+        if m.group(0)[0] == ";" and len(text[start:end].strip()) < 25:
             continue  # keep short list fragments together
         spans.append((start, end))
         start = end
@@ -62,6 +74,17 @@ def _sentence_spans(text: str, base: int) -> list[tuple[int, int]]:
         if trail > lead:
             out.append((base + s + lead, base + s + trail))
     return out
+
+
+def _is_numbered_heading(stripped: str, next_line: str) -> bool:
+    """'3. Teams' is a heading; '3. Teams must be public' in a numbered list is a rule."""
+    if not _NUMBERED_HEADING.match(stripped) or len(stripped) >= 90 or stripped[-1] in ".;:!?,":
+        return False
+    if len(stripped.split()) > 7:
+        return False
+    nxt = next_line.strip()
+    # a heading is followed by body text or a bullet list, not by the next numbered item
+    return bool(nxt) and not re.match(r"\s*\(?\d+(?:\.\d+)*[.)]?\s", next_line)
 
 
 def split_clauses(doc: str, version: str) -> list[Clause]:
@@ -81,11 +104,12 @@ def split_clauses(doc: str, version: str) -> list[Clause]:
             clauses.append(Clause(f"{version}:{sec_idx}.{clause_idx}", version, section, doc[s:e], s, e))
         para_start = None
 
-    for line in doc.splitlines(keepends=True):
+    lines = doc.splitlines(keepends=True)
+    for i, line in enumerate(lines):
         stripped = line.strip()
-        h = _HEADING.match(line.rstrip("\n"))
-        nh = None if h else _NUMBERED_HEADING.match(stripped)
-        if h or (nh and len(stripped) < 90):
+        h = _HEADING.match(line.rstrip("\r\n"))
+        next_line = next((ln for ln in lines[i + 1:] if ln.strip()), "")
+        if h or (stripped and _is_numbered_heading(stripped, next_line)):
             flush(pos)
             section = (h.group(2) if h else stripped).strip()
             sec_idx += 1
@@ -94,12 +118,9 @@ def split_clauses(doc: str, version: str) -> list[Clause]:
             flush(pos)
         elif _BULLET.match(line):
             flush(pos)
+            para_start = pos + _BULLET.match(line).end()
+        elif para_start is None:
             para_start = pos + (len(line) - len(line.lstrip()))
-            m = _BULLET.match(line)
-            para_start = pos + m.end()
-        else:
-            if para_start is None:
-                para_start = pos + (len(line) - len(line.lstrip()))
         pos += len(line)
     flush(pos)
     return clauses
@@ -193,11 +214,11 @@ def align(old: list[Clause], new: list[Clause], min_sim: float = 0.45) -> list[C
     inv = {v: k for k, v in rename.items()}
     for kn in seen:
         ko = kn if kn in og else inv.get(kn)
-        olds = og.get(ko, []) if ko else []
+        olds = og.get(ko, []) if ko is not None else []
         news = ng[kn]
         changes.extend(_align_section(olds, news, min_sim))
         emitted_new.add(kn)
-        if ko:
+        if ko is not None:
             og.pop(ko, None)
     for ko, olds in og.items():  # sections that disappeared entirely
         changes.extend(Change("removed", o, None) for o in olds)

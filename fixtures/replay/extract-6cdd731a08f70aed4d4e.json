@@ -2,9 +2,9 @@
  "endpoint": "extract",
  "usage": {
   "endpoint": "extract",
-  "credits": 7.0,
-  "cost_usd": 0.001394,
-  "model_ms": 154.5,
+  "credits": 8.0,
+  "cost_usd": 0.001594,
+  "model_ms": 176.9,
   "attempts": 1,
   "replayed": false
  },
@@ -15,49 +15,49 @@
     "value": "November 14, 2026 at 11:59 p.m. Pacific Time",
     "start": 171,
     "end": 215,
-    "confidence": 0.9999999995600777,
-    "p_verify": 0.9999999995600777
+    "confidence": 0.9999999995187288,
+    "p_verify": 0.9999999995187288
    },
    "building_period": {
     "value": "October 22 to November 14, 2026",
     "start": 117,
     "end": 148,
-    "confidence": 0.9999999991610733,
-    "p_verify": 0.9999999991610733
+    "confidence": 0.9999999986102108,
+    "p_verify": 0.9999999986102108
    },
    "winners_announced": {
     "value": "November 28, 2026",
     "start": 242,
     "end": 259,
-    "confidence": 0.9999999994219746,
-    "p_verify": 0.9999999994219746,
+    "confidence": 0.9999999995270321,
+    "p_verify": 0.9999999995270321,
     "normalized": {
      "value": "2026-11-28",
      "source": "derived",
      "rule": "date_month_name",
-     "confidence": 0.9999999994219746
+     "confidence": 0.9999999995270321
     }
    },
    "prize_pool": {
     "value": "$10,000",
     "start": 880,
     "end": 887,
-    "confidence": 0.9999999999300164,
-    "p_verify": 0.9999999999300164
+    "confidence": 0.9999999998812912,
+    "p_verify": 0.9999999998812912
    },
    "top_prize": {
     "value": "$6,000",
     "start": 910,
     "end": 916,
-    "confidence": 0.9999999998800615,
-    "p_verify": 0.9999999998800615
+    "confidence": 0.9999999998672513,
+    "p_verify": 0.9999999998672513
    },
    "max_team_size": {
     "value": "four",
     "start": 566,
     "end": 570,
-    "confidence": 0.9999999982071885,
-    "p_verify": 0.9999999982071885,
+    "confidence": 0.9999999989783659,
+    "p_verify": 0.9999999989783659,
     "normalized": null,
     "normalization_reason": "not_parseable_or_not_stated"
    },
@@ -65,22 +65,22 @@
     "value": "no longer than three minutes",
     "start": 773,
     "end": 801,
-    "confidence": 0.9999999992091069,
-    "p_verify": 0.9999999992091069
+    "confidence": 0.9999999991731492,
+    "p_verify": 0.9999999991731492
    },
    "repository_rule": {
     "value": "a link to a public source repository with its full commit history",
     "start": 689,
     "end": 754,
-    "confidence": 0.9999999990630553,
-    "p_verify": 0.9999999990630553
+    "confidence": 0.9999999994061661,
+    "p_verify": 0.9999999994061661
    },
    "existing_work_rule": {
     "value": "Only projects started during the building period are eligible. Earlier projects are not eligible, even with substantial changes.",
     "start": 1214,
     "end": 1342,
-    "confidence": 0.9999999980946743,
-    "p_verify": 0.9999999980946743
+    "confidence": 0.9999999985658552,
+    "p_verify": 0.9999999985658552
    },
    "excluded_residents": {
     "value": [
@@ -92,48 +92,48 @@
       "value": "Quebec",
       "start": 395,
       "end": 401,
-      "confidence": 0.9999999962675179,
-      "p_verify": 0.9999999962675179
+      "confidence": 0.9999999977185621,
+      "p_verify": 0.9999999977185621
      },
      {
       "value": "countries under US sanctions",
       "start": 409,
       "end": 437,
-      "confidence": 0.9999999949380296,
-      "p_verify": 0.9999999949380296
+      "confidence": 0.9999999970701698,
+      "p_verify": 0.9999999970701698
      }
     ],
-    "confidence": 0.9999999949380296
+    "confidence": 0.9999999970701698
    },
    "payout_method": {
     "value": "through Wise",
     "start": 997,
     "end": 1009,
-    "confidence": 0.9999531663322413,
-    "p_verify": 0.9999531663322413
+    "confidence": 0.9998017415329467,
+    "p_verify": 0.9998017415329467
    }
   },
   "timing": {
-   "read_ms": 154,
+   "read_ms": 176,
    "forwards": {
     "fields": [
      7,
-     0
+     1
     ]
    },
    "stages": {
     "fields": {
      "reader": "recognition",
-     "doc": 0,
-     "branches": 2,
-     "generate": 106,
+     "doc": 6,
+     "branches": 1,
+     "generate": 120,
      "locate": 0,
-     "verify": 44,
+     "verify": 46,
      "assemble": 0
     }
    },
-   "total_ms": 154,
-   "server_ms": 160
+   "total_ms": 176,
+   "server_ms": 186
   }
  }
 }

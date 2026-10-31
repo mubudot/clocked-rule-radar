@@ -2,9 +2,9 @@
  "endpoint": "compare",
  "usage": {
   "endpoint": "compare",
-  "credits": 17.0,
-  "cost_usd": 0.003386,
-  "model_ms": 413.0,
+  "credits": 20.0,
+  "cost_usd": 0.003984,
+  "model_ms": 480.6,
   "attempts": 1,
   "replayed": false
  },
@@ -43,21 +43,21 @@
     "relation": "conflicting",
     "related": 0.9983,
     "probabilities": {
-     "same": 0.0016,
-     "overlapping": 0.0029,
-     "conflicting": 0.9937,
+     "same": 0.0018,
+     "overlapping": 0.0027,
+     "conflicting": 0.9939,
      "unrelated": 0.0017
     },
     "duplicates": [
      {
       "kind": "restated",
       "kinds": {
-       "verbatim": 0.9854,
-       "restated": 0.0046,
-       "elaborated": 0.0061,
-       "different": 0.0039
+       "verbatim": 0.9624,
+       "restated": 0.0159,
+       "elaborated": 0.0139,
+       "different": 0.0078
       },
-      "confidence": 0.9961,
+      "confidence": 0.9922,
       "a": {
        "document": "old",
        "quote": "Employees of Northwind Labs and their immediate families may not enter.",
@@ -76,12 +76,12 @@
      {
       "kind": "restated",
       "kinds": {
-       "verbatim": 0.987,
-       "restated": 0.0054,
-       "elaborated": 0.004,
-       "different": 0.0036
+       "verbatim": 0.9738,
+       "restated": 0.0154,
+       "elaborated": 0.0058,
+       "different": 0.005
       },
-      "confidence": 0.9964,
+      "confidence": 0.995,
       "a": {
        "document": "old",
        "quote": "Each person may be a member of only one team.",
@@ -100,12 +100,12 @@
      {
       "kind": "restated",
       "kinds": {
-       "verbatim": 0.9296,
-       "restated": 0.0377,
-       "elaborated": 0.0214,
-       "different": 0.0113
+       "verbatim": 0.9646,
+       "restated": 0.0157,
+       "elaborated": 0.0116,
+       "different": 0.0082
       },
-      "confidence": 0.9887,
+      "confidence": 0.9918,
       "a": {
        "document": "old",
        "quote": "The total prize pool is $10,000.",
@@ -120,20 +120,44 @@
        "end": 888,
        "confidence": 1
       }
+     },
+     {
+      "kind": "restated",
+      "kinds": {
+       "verbatim": 0.0048,
+       "restated": 0.9864,
+       "elaborated": 0.0053,
+       "different": 0.0035
+      },
+      "confidence": 0.501,
+      "a": {
+       "document": "old",
+       "quote": "Harassment of any participant leads to disqualification.",
+       "start": 1239,
+       "end": 1295,
+       "confidence": 1
+      },
+      "b": {
+       "document": "new",
+       "quote": "Code of conduct\nAny participant who harasses another participant will be disqualified.\n\n## 9.",
+       "start": 1350,
+       "end": 1443,
+       "confidence": 0.501
+      }
      }
     ],
     "conflicts": [
      {
       "kind": "date_or_version",
       "kinds": {
-       "value": 0.0068,
-       "date_or_version": 0.9852,
-       "rule_or_condition": 0.0028,
-       "scope": 0.0011,
-       "name": 0.0021,
-       "no_conflict": 0.002
+       "value": 0.0072,
+       "date_or_version": 0.9836,
+       "rule_or_condition": 0.0031,
+       "scope": 0.0013,
+       "name": 0.0024,
+       "no_conflict": 0.0024
       },
-      "confidence": 0.998,
+      "confidence": 0.9976,
       "a": {
        "document": "old",
        "quote": "The building period runs from October 22 to November 20, 2026.",
@@ -152,14 +176,14 @@
      {
       "kind": "date_or_version",
       "kinds": {
-       "value": 0.0064,
-       "date_or_version": 0.9841,
-       "rule_or_condition": 0.0041,
-       "scope": 0.0013,
-       "name": 0.0019,
-       "no_conflict": 0.0022
+       "value": 0.0027,
+       "date_or_version": 0.991,
+       "rule_or_condition": 0.0025,
+       "scope": 0.0009,
+       "name": 0.0013,
+       "no_conflict": 0.0016
       },
-      "confidence": 0.9978,
+      "confidence": 0.9984,
       "a": {
        "document": "old",
        "quote": "Submissions close on November 20, 2026 at 11:59 p.m.",
@@ -178,14 +202,14 @@
      {
       "kind": "date_or_version",
       "kinds": {
-       "value": 0.0019,
-       "date_or_version": 0.9936,
-       "rule_or_condition": 0.0012,
+       "value": 0.0021,
+       "date_or_version": 0.993,
+       "rule_or_condition": 0.0015,
        "scope": 0.0008,
-       "name": 0.0013,
-       "no_conflict": 0.0011
+       "name": 0.0014,
+       "no_conflict": 0.0012
       },
-      "confidence": 0.9989,
+      "confidence": 0.9988,
       "a": {
        "document": "old",
        "quote": "Winners are announced on December 4, 2026.",
@@ -202,16 +226,16 @@
       }
      },
      {
-      "kind": "date_or_version",
+      "kind": "scope",
       "kinds": {
-       "value": 0.0941,
-       "date_or_version": 0.5071,
-       "rule_or_condition": 0.0795,
-       "scope": 0.2341,
-       "name": 0.0383,
-       "no_conflict": 0.047
+       "value": 0.1229,
+       "date_or_version": 0.2029,
+       "rule_or_condition": 0.0897,
+       "scope": 0.4923,
+       "name": 0.0501,
+       "no_conflict": 0.0421
       },
-      "confidence": 0.953,
+      "confidence": 0.9579,
       "a": {
        "document": "old",
        "quote": "The building period runs from October 22 to November 20, 2026.",
@@ -230,14 +254,14 @@
      {
       "kind": "value",
       "kinds": {
-       "value": 0.9852,
-       "date_or_version": 0.0022,
-       "rule_or_condition": 0.0052,
-       "scope": 0.0027,
-       "name": 0.0028,
-       "no_conflict": 0.0019
+       "value": 0.9784,
+       "date_or_version": 0.0031,
+       "rule_or_condition": 0.0092,
+       "scope": 0.003,
+       "name": 0.0038,
+       "no_conflict": 0.0024
       },
-      "confidence": 0.9981,
+      "confidence": 0.9976,
       "a": {
        "document": "old",
        "quote": "You may enter alone or in a team of up to six people.",
@@ -256,14 +280,14 @@
      {
       "kind": "value",
       "kinds": {
-       "value": 0.921,
-       "date_or_version": 0.0086,
-       "rule_or_condition": 0.0483,
-       "scope": 0.0077,
-       "name": 0.0071,
-       "no_conflict": 0.0073
+       "value": 0.9101,
+       "date_or_version": 0.0079,
+       "rule_or_condition": 0.0614,
+       "scope": 0.0074,
+       "name": 0.0064,
+       "no_conflict": 0.0068
       },
-      "confidence": 0.9927,
+      "confidence": 0.9932,
       "a": {
        "document": "old",
        "quote": "Submit a project page with a description, a link to a source repository, and a demo video no longer than five minutes.",
@@ -282,14 +306,14 @@
      {
       "kind": "rule_or_condition",
       "kinds": {
-       "value": 0.002,
-       "date_or_version": 0.0023,
-       "rule_or_condition": 0.9861,
-       "scope": 0.0045,
-       "name": 0.0025,
-       "no_conflict": 0.0026
+       "value": 0.0017,
+       "date_or_version": 0.0018,
+       "rule_or_condition": 0.99,
+       "scope": 0.0027,
+       "name": 0.002,
+       "no_conflict": 0.0018
       },
-      "confidence": 0.9974,
+      "confidence": 0.9982,
       "a": {
        "document": "old",
        "quote": "The repository may be public or private; if private, share it with judges@northwind.example.",
@@ -308,14 +332,14 @@
      {
       "kind": "value",
       "kinds": {
-       "value": 0.9938,
-       "date_or_version": 0.0014,
-       "rule_or_condition": 0.0016,
-       "scope": 0.001,
-       "name": 0.0012,
-       "no_conflict": 0.001
+       "value": 0.9926,
+       "date_or_version": 0.0015,
+       "rule_or_condition": 0.0022,
+       "scope": 0.0013,
+       "name": 0.0013,
+       "no_conflict": 0.0013
       },
-      "confidence": 0.999,
+      "confidence": 0.9987,
       "a": {
        "document": "old",
        "quote": "First place receives $5,000, second place receives $3,000, and third place receives $2,000.",
@@ -334,14 +358,14 @@
      {
       "kind": "name",
       "kinds": {
-       "value": 0.0214,
-       "date_or_version": 0.0215,
-       "rule_or_condition": 0.3924,
-       "scope": 0.0181,
-       "name": 0.5341,
-       "no_conflict": 0.0125
+       "value": 0.0161,
+       "date_or_version": 0.0202,
+       "rule_or_condition": 0.174,
+       "scope": 0.0184,
+       "name": 0.7582,
+       "no_conflict": 0.0131
       },
-      "confidence": 0.9875,
+      "confidence": 0.9869,
       "a": {
        "document": "old",
        "quote": "Prizes are paid by bank transfer within 30 days of verification.",
@@ -360,14 +384,14 @@
      {
       "kind": "rule_or_condition",
       "kinds": {
-       "value": 0.0037,
-       "date_or_version": 0.0036,
-       "rule_or_condition": 0.9737,
-       "scope": 0.0112,
-       "name": 0.0035,
-       "no_conflict": 0.0044
+       "value": 0.0031,
+       "date_or_version": 0.0025,
+       "rule_or_condition": 0.9804,
+       "scope": 0.0082,
+       "name": 0.0025,
+       "no_conflict": 0.0034
       },
-      "confidence": 0.9956,
+      "confidence": 0.9966,
       "a": {
        "document": "old",
        "quote": "Projects started before the building period are allowed if the new work is clearly described.",
@@ -386,14 +410,14 @@
      {
       "kind": "rule_or_condition",
       "kinds": {
-       "value": 0.0023,
-       "date_or_version": 0.0025,
-       "rule_or_condition": 0.9803,
-       "scope": 0.0088,
-       "name": 0.0026,
-       "no_conflict": 0.0035
+       "value": 0.0024,
+       "date_or_version": 0.0028,
+       "rule_or_condition": 0.9822,
+       "scope": 0.0073,
+       "name": 0.0024,
+       "no_conflict": 0.0029
       },
-      "confidence": 0.9965,
+      "confidence": 0.9971,
       "a": {
        "document": "old",
        "quote": "Projects started before the building period are allowed if the new work is clearly described.",
@@ -424,16 +448,16 @@
   ],
   "stages": {
    "pairs_reread": 0,
-   "pairs_ms": 286,
+   "pairs_ms": 33,
    "passage_reads": 1,
-   "passages_ms": 118,
+   "passages_ms": 173,
    "passages": 17,
-   "counterparts_ms": 228,
-   "kinds_ms": 61
+   "counterparts_ms": 375,
+   "kinds_ms": 62
   },
   "timing": {
-   "read_ms": 693,
-   "total_ms": 696
+   "read_ms": 642,
+   "total_ms": 646
   }
  }
 }

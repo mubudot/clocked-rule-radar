@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .clocked import ClockedError
 from .config import Settings, load_dotenv
-from .pipeline import InputError, analyze, check_claims
+from .pipeline import InputError, analyze, check_claims, exit_code
 from .report_text import render
 
-EXIT_MATERIAL = 3
+EXIT_ERROR = 2
 
 
 def _profile(arg: str | None) -> dict:
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
             old, new = Path(args.old).read_text("utf-8"), Path(args.new).read_text("utf-8")
             rep = analyze(old, new, client=client, llm=settings.model(), profile=_profile(args.profile))
             print(json.dumps(rep, ensure_ascii=False, indent=1) if args.json else render(rep))
-            return EXIT_MATERIAL if rep["counts"].get("material") else 0
+            return exit_code(rep)
         if args.cmd == "check":
             old, new = Path(args.old).read_text("utf-8"), Path(args.new).read_text("utf-8")
             out = check_claims(old, new, args.claims, client=client)
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
                          profile=_profile(args.profile))
     except (InputError, ClockedError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
-        return 2
+        return EXIT_ERROR
     return 0
 
 

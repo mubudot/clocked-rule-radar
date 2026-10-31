@@ -101,16 +101,30 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
 
     # Phase 2: Rerank orders what is left by impact on this entrant.
     ranks, action_needed = None, None
-    rr_payload = rerank.build_payload(changes, profile, query)
-    if rr_payload is None:
+    rr_payloads, shortened = rerank.build_payloads(changes, profile, query)
+    if not rr_payloads:
         st.skip("rerank", "no rule changes to rank")
     else:
-        rr_res, rr_err = _call(client, "rerank", rr_payload)
-        if rr_res:
-            ranks, action_needed = rerank.interpret(rr_res[0])
-            st.ok("rerank", rr_res[1], note=f"{len(ranks)} changes ranked")
+        parts, used, rr_err = [], [], None
+        for p in rr_payloads:
+            res, rr_err = _call(client, "rerank", p)
+            if not res:
+                break
+            r, verdict = rerank.interpret(res[0])
+            parts.append(r)
+            used.append(res[1])
+            action_needed = action_needed or verdict
+        if rr_err is None:
+            ranks = rerank.merge(parts)
+            note = f"{len(ranks)} changes ranked" + (f" in {len(rr_payloads)} requests" if len(rr_payloads) > 1 else "")
+            if shortened:
+                note += f"; {len(shortened)} long change(s) ranked on a shortened passage"
+            st.ok("rerank", used, note=note)
         else:
+            action_needed = None
             st.fail("rerank", rr_err, "changes are ordered by a local rule (material first)")
+    for c in changes:
+        c["shortened_for_rerank"] = c["id"] in shortened
     changes = rerank.order(changes, ranks)
 
     # Phase 3: the brief (model, or template when there is no model / the model fails).
@@ -131,6 +145,7 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     for c in changes:
         counts[c["materiality"]] = counts.get(c["materiality"], 0) + 1
     return {
+        "assessment": _assessment(st.items, changes, action_needed, brief),
         "versions": {"old": old_text, "new": new_text},
         "profile": profile or {},
         "changes": changes, "fields": fields, "brief": brief, "action_needed": action_needed,
@@ -142,17 +157,49 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     }
 
 
+EXIT_CHANGES, EXIT_INCOMPLETE = 3, 4
+
+
+def exit_code(rep: dict[str, Any]) -> int:
+    """CLI/watch status: 0 = nothing relevant changed, 3 = relevant changes, 4 = incomplete assessment."""
+    a = rep["assessment"]
+    if not a["complete"]:
+        return EXIT_INCOMPLETE
+    return EXIT_CHANGES if a["relevant_changes"] else 0
+
+
+def relevant(change: dict[str, Any]) -> bool:
+    """A change an entrant should look at: not cosmetic and not ranked as someone else's case."""
+    return change["materiality"] != "wording" and (change.get("rank") or {}).get("label") != "not_your_case"
+
+
+def _assessment(stages: dict[str, dict[str, Any]], changes: list[dict[str, Any]],
+                action_needed: dict[str, Any] | None, brief: dict[str, Any]) -> dict[str, Any]:
+    """Overall answer + whether it can be trusted. Used by the UI banner and CLI exit codes."""
+    failed = [k for k, v in stages.items() if v["status"] == "failed"]
+    incomplete = bool(failed) or bool(brief.get("partial"))
+    if action_needed and isinstance(action_needed.get("decision"), bool):
+        action = "yes" if action_needed["decision"] else "no"
+    elif "rerank" in failed or "compare" in failed:
+        action = "unknown"
+    else:
+        action = "yes" if any((c.get("rank") or {}).get("label") == "act" for c in changes) else "no"
+    return {"action": action, "complete": not incomplete, "failed_stages": failed,
+            "relevant_changes": sum(1 for c in changes if relevant(c))}
+
+
 def _verify_brief(client: Client, st: _Stages, old_text: str, new_text: str,
                   lines: list[dict[str, Any]], llm: LLM | None) -> dict[str, Any]:
     texts = [ln["text"] for ln in lines][:verify.MAX_CLAIMS]
     if not texts:
         st.skip("verify", "nothing to verify")
-        return {"lines": [], "rejected": [], "grounded": None, "verified": False}
+        return {"lines": [], "rejected": [], "grounded": None, "verified": False, "partial": False}
     res, err = _call(client, "grounding", verify.build_payload(old_text, new_text, texts))
     if not res:
         st.fail("verify", err, "brief is shown as NOT VERIFIED")
         v = verify.unverified(texts)
-        return {"lines": _join(lines, v["claims"]), "rejected": [], "grounded": None, "verified": False}
+        return {"lines": _join(lines, v["claims"]), "rejected": [], "grounded": None, "verified": False,
+                "partial": False}
     v = verify.interpret(res[0], texts)
     st.ok("verify", res[1], note=f"grounded {v['grounded']}")
     rows = _join(lines, v["claims"])
@@ -164,7 +211,11 @@ def _verify_brief(client: Client, st: _Stages, old_text: str, new_text: str,
         st.skip("repair", "no rejected lines" if not bad else "no model available to rewrite them")
     kept = [r for r in rows if r["status"] != "rejected"]
     rejected = [r for r in rows if r["status"] == "rejected"]
-    return {"lines": kept, "rejected": rejected, "grounded": v["grounded"], "verified": True}
+    missing = sum(1 for r in kept if r["status"] == "unverified")
+    if missing:  # Verify answered, but not for every line: say so instead of claiming a checked brief
+        st.items["verify"]["note"] += f"; {missing} line(s) had no judgment"
+    return {"lines": kept, "rejected": rejected, "grounded": v["grounded"], "verified": missing == 0,
+            "partial": missing > 0}
 
 
 def _join(lines: list[dict[str, Any]], claims: list[dict[str, Any]]) -> list[dict[str, Any]]:

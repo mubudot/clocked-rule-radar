@@ -34,33 +34,67 @@ LABELS = {("use", None): "act", ("expand", None): "read_section",
 RANKABLE = {"material", "unconfirmed", "new", "removed", "moved"}
 
 
-def passage(change: dict[str, Any]) -> str:
+MAX_DOCS = 256          # per request
+MAX_PASSAGE = 20_000    # characters per document
+SIDE = 9_900            # each side of a Before/Now passage when the pair is too long
+
+
+def _clip(text: str, limit: int) -> tuple[str, bool]:
+    return (text, False) if len(text) <= limit else (text[: limit - 1] + "\u2026", True)
+
+
+def passage(change: dict[str, Any]) -> tuple[str, bool]:
+    """Passage text for one change, and whether it had to be shortened to fit."""
     old, new = change.get("old"), change.get("new")
     if change["status"] == "edited":
-        return f"Changed rule. Before: {old['text']} Now: {new['text']}"
+        full = f"Changed rule. Before: {old['text']} Now: {new['text']}"
+        if len(full) <= MAX_PASSAGE:
+            return full, False
+        o, _ = _clip(old["text"], SIDE)   # keep both sides instead of cutting off the new text
+        n, _ = _clip(new["text"], SIDE)
+        return f"Changed rule. Before: {o} Now: {n}", True
     if change["status"] == "added":
-        return f"New rule: {new['text']}"
-    return f"Removed rule: {old['text']}"
+        return _clip(f"New rule: {new['text']}", MAX_PASSAGE)
+    return _clip(f"Removed rule: {old['text']}", MAX_PASSAGE)
+
+
+def build_payloads(changes: list[dict[str, Any]], profile: dict[str, Any] | None,
+                   query: str | None = None) -> tuple[list[dict[str, Any]], set[str]]:
+    """One payload per 256 changes (every change is ranked), plus the ids of shortened passages.
+    The yes/no action question is asked only when everything fits in one request, because an
+    answer over part of the changes would be a partial answer."""
+    docs, shortened = [], set()
+    for c in changes:
+        if c["materiality"] not in RANKABLE:
+            continue
+        text, cut = passage(c)
+        if cut:
+            shortened.add(c["id"])
+        docs.append({"id": c["id"], "title": c["section"][:500] or "Rules", "text": text,
+                     "metadata": {"change": c["status"], "materiality": c["materiality"]}})
+    ctx = {k: v for k, v in (profile or {}).items() if v not in (None, "", [])}
+    batches = [docs[i:i + MAX_DOCS] for i in range(0, len(docs), MAX_DOCS)]
+    payloads = []
+    for batch in batches:
+        p: dict[str, Any] = {"query": (query or DEFAULT_QUERY)[:4000], "documents": batch,
+                             "instructions": INSTRUCTIONS}
+        if len(batches) == 1:
+            p["questions"] = ACTION_QUESTION
+        if ctx:
+            p["context"] = ctx
+        payloads.append(p)
+    return payloads, shortened
 
 
 def build_payload(changes: list[dict[str, Any]], profile: dict[str, Any] | None,
                   query: str | None = None) -> dict[str, Any] | None:
-    docs = [{"id": c["id"], "title": c["section"][:500] or "Rules", "text": passage(c)[:20000],
-             "metadata": {"change": c["status"], "materiality": c["materiality"]}}
-            for c in changes if c["materiality"] in RANKABLE]
-    if not docs:
-        return None
-    payload: dict[str, Any] = {"query": (query or DEFAULT_QUERY)[:4000], "documents": docs[:256],
-                               "instructions": INSTRUCTIONS, "questions": ACTION_QUESTION}
-    ctx = {k: v for k, v in (profile or {}).items() if v not in (None, "", [])}
-    if ctx:
-        payload["context"] = ctx
-    return payload
+    payloads, _ = build_payloads(changes, profile, query)
+    return payloads[0] if payloads else None
 
 
 def interpret(resp: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str, Any] | None]:
     ranks: dict[str, dict[str, Any]] = {}
-    for pos, r in enumerate(resp.get("results") or []):
+    for pos, r in enumerate(r for r in resp.get("results") or [] if isinstance(r, dict)):
         rid = r.get("id")
         if not rid:
             continue
@@ -74,6 +108,16 @@ def interpret(resp: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str
     if isinstance(ans, dict):
         verdict = {"probability": ans.get("noul"), "decision": ans.get("decision")}
     return ranks, verdict
+
+
+def merge(parts: list[dict[str, dict[str, Any]]]) -> dict[str, dict[str, Any]]:
+    """Combine ranks from several batches: positions follow relevance across all of them."""
+    allr = {k: v for p in parts for k, v in p.items()}
+    if len(parts) > 1:
+        order = sorted(allr, key=lambda k: -(allr[k].get("relevance") or 0))
+        for pos, k in enumerate(order):
+            allr[k]["position"] = pos
+    return allr
 
 
 LOCAL_ORDER = {"material": 0, "new": 1, "removed": 2, "unconfirmed": 3, "moved": 4, "wording": 5}

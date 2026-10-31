@@ -91,6 +91,7 @@ button[disabled] { opacity: .6; cursor: progress; }
 .verdict { display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center;
   border-left: 6px solid var(--act); }
 .verdict.calm { border-left-color: var(--ok); }
+.verdict.unknown { border-left-color: var(--check); }
 .verdict .big { font-family: var(--serif); font-size: 2.1rem; line-height: 1; }
 .verdict .big small { display: block; font: 600 .74rem/1.4 var(--sans); text-transform: uppercase; letter-spacing: .08em;
   color: var(--muted); margin-bottom: 6px; }

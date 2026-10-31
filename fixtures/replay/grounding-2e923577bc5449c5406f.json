@@ -4,54 +4,47 @@
   "endpoint": "grounding",
   "credits": 4.0,
   "cost_usd": 0.000797,
-  "model_ms": 82.5,
+  "model_ms": 91.3,
   "attempts": 1,
   "replayed": false
  },
  "response": {
   "model": "clocked-1.0",
-  "grounded": 0.0119,
-  "ungrounded": 0.9881,
+  "grounded": 0.0082,
+  "ungrounded": 0.9918,
   "verdict": "contradicted",
   "threshold": 0.5,
   "instructions_used": "custom",
   "documents": [
    {
     "id": "new",
-    "share": 0.6705,
-    "share_of_answer": 0.008,
+    "share": 0,
+    "share_of_answer": 0.0053,
     "claims": []
    },
    {
     "id": "old",
-    "share": 0.3295,
-    "share_of_answer": 0.0039,
+    "share": 0,
+    "share_of_answer": 0.0028,
     "claims": []
    }
   ],
   "claims": [
    {
-    "claim": "Teams of up to six people are still allowed.",
+    "claim": "The submission deadline was extended to November 24, 2026.",
     "kind": "claim",
     "counted": true,
     "weight": 1,
-    "supported": 0.0119,
-    "contradicted": 0.9831,
-    "not_stated": 0.0023,
-    "not_a_claim": 0.0027,
+    "supported": 0.0082,
+    "contradicted": 0.9857,
+    "not_stated": 0.0038,
+    "not_a_claim": 0.0024,
     "verdict": "contradicted",
     "sources": {
-     "old": 0.3295,
-     "new": 0.6705
+     "old": 0.3471,
+     "new": 0.6529
     },
-    "source": null,
-    "evidence": {
-     "document": "new",
-     "quote": "You may enter alone or in a team of up to four people.",
-     "start": 524,
-     "end": 578,
-     "confidence": 0.94
-    }
+    "source": null
    }
   ],
   "unsupported_claims": [
@@ -60,11 +53,11 @@
   "not_claims": [],
   "weakest_claim": {
    "index": 0,
-   "supported": 0.0119
+   "supported": 0.0082
   },
   "timing": {
-   "read_ms": 241,
-   "total_ms": 242
+   "read_ms": 183,
+   "total_ms": 185
   }
  }
 }

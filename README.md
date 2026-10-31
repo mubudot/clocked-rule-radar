@@ -42,7 +42,7 @@ Terminal version:
 
 ```bash
 python -m rule_radar analyze samples/northwind_v1.md samples/northwind_v2.md \
-       --profile samples/profile_solo_taiwan.json      # exit code 3 = material changes found
+       --profile samples/profile_solo_taiwan.json      # exit code 3 = changes that concern you
 python -m rule_radar check samples/northwind_v1.md samples/northwind_v2.md \
        "The total prize pool grew to \$12,000."
 ```
@@ -62,7 +62,9 @@ python -m rule_radar check samples/northwind_v1.md samples/northwind_v2.md \
 4. Start the app with `python -m rule_radar serve` and paste any two versions.
 
 To watch a live rules page, run this from cron or CI. It saves a text snapshot each run and analyses it
-against the previous one. Exit codes: 0 = no change, 3 = material change, 2 = error.
+against the last snapshot that was fully analysed (the baseline). Exit codes, for `analyze` and `watch`:
+0 = nothing that concerns you changed, 3 = changes that concern you, 4 = assessment incomplete (a Clocked
+stage failed; `watch` keeps the baseline and repeats the comparison next run), 2 = error.
 
 ```bash
 python -m rule_radar watch https://example.com/hackathon/rules --profile me.json
@@ -92,8 +94,8 @@ python -m rule_radar watch https://example.com/hackathon/rules --profile me.json
 
 | Endpoint | Group | What we send | How its output changes the app |
 | --- | --- | --- | --- |
-| **Compare** `/compare` | Verify · Compare · Rerank | both versions, `evidence: "all"`, rules telling it that a changed date/amount/limit/condition counts as a conflict and a new version label does not | Its conflict and duplicate passages, with offsets in each version, are mapped onto the locally aligned clauses. An edit with a conflict becomes **material** and is ranked. An edit Compare calls a restatement is **wording only** and hidden by default. An edit Compare says nothing about is **unconfirmed** and labelled "read it yourself". An added clause that conflicts with an old one is linked to it. |
-| **Rerank** `/rerank` | Verify · Compare · Rerank | each non-cosmetic change as a passage ("Before: … Now: …"), the entrant profile as `context`, and one `questions` entry | `action` and `reason` set the label and the order. `use` → *Act on this*, `expand` → *Read the section*, `skip/different_case` → *Not your case*, `skip/unrelated` → *Low impact*. The model only sees changes that apply to you: *Not your case* changes never reach the brief. The Decide answer `action_needed` drives the "Action needed: Yes/No" banner. |
+| **Compare** `/compare` | Verify · Compare · Rerank | both versions, `evidence: "all"`, rules telling it that a changed date/amount/limit/condition counts as a conflict and a new version label does not | Its conflict and duplicate passages, with offsets in each version, are mapped onto the locally aligned clauses. An edit with a conflict becomes **material** and is ranked. An edit is **wording only**, and hidden by default, only when Compare's restated passages cover every changed part on both sides. In the sample, the reworded code-of-conduct sentence is wording only. An edit Compare says nothing about is **unconfirmed** and labelled "read it yourself". An added clause that conflicts with an old one is linked to it. |
+| **Rerank** `/rerank` | Verify · Compare · Rerank | each non-cosmetic change as a passage ("Before: … Now: …"), the entrant profile as `context`, and one `questions` entry | `action` and `reason` set the label and the order. `use` → *Act on this*, `expand` → *Read the section*, `skip/different_case` → *Not your case*, `skip/unrelated` → *Low impact*. *Not your case* changes never reach the brief, and neither do the Extract facts inside them. The Decide answer `action_needed` drives the "Action needed: Yes/No" banner. |
 | **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with the quoted evidence. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
 | **Extract** `/extract` | Decide · Extract · Fill | each version, 11 named fields (deadline, building period, winners date, prize pool, top prize, team size, video limit, repository rule, existing-work rule, excluded residents, payout) | Verbatim values and offsets feed the key-facts table and the source highlighter. They are also the facts the model is allowed to use. A `null` value is shown as *not stated*, never guessed. A read below 0.6 confidence is flagged *low confidence, check*. |
 
@@ -107,14 +109,20 @@ the credits and model time of every stage, read from the `X-Clocked-*` response 
 - **Missing information**: an Extract `null` shows as *not stated*. Verify's `not_stated` pulls a line from
   the brief. A missing Verify evidence passage is never invented.
 - **Failed requests**: every request has one `Idempotency-Key`, which is reused on every retry. 429, 5xx and
-  network errors are retried with bounded exponential backoff and jitter (4 attempts). 400/401/402/403/422 and
-  `retryAsNew` are never retried. A stage that still fails does not sink the run, and the report says what the
+  network errors are retried with bounded exponential backoff and jitter (4 attempts). A 409 that follows an
+  unknown outcome (timeout or 5xx) means the first attempt is still running, so it is retried with the same
+  key. 400/401/402/403/422, any other 409, and `retryAsNew` are never retried. A stage that still fails does not sink the run, and the report says what the
   app did instead:
   - Compare down → every edit is shown as *unconfirmed* (local diff only).
   - Extract down → no key-facts table.
-  - Rerank down → a local order is used (material first).
+  - Rerank down → a local order is used (material first) and the banner says **Action needed: Unknown**.
   - Model down → a template brief is used, and the repair step is skipped.
-  - Verify down → the brief is shown, marked **NOT VERIFIED** in red.
+  - Verify down → the brief is shown, marked **NOT VERIFIED** in red. If Verify answers for only some
+    lines, the brief is marked **PARTLY VERIFIED**.
+- **Concurrency**: the web server shares one budget of 4 concurrent Clocked requests across all open scans.
+  This matches the limit of an account with the hackathon code. More than 256 changes are ranked in
+  several Rerank requests. A change too long for one Rerank passage is ranked on a shortened passage that
+  keeps both sides, and is labelled as such.
 - **Limits**: each version may be up to 90,000 characters, so the two together stay inside Compare's and
   Verify's 200,000-character budget. Bigger inputs are refused with a clear message instead of being cut.
 
@@ -134,16 +142,17 @@ rule_radar/
   pipeline.py          orchestration, per-stage status and fallbacks
   server.py, web/      stdlib HTTP server + vanilla JS UI (strict CSP, no external assets)
   snapshots.py         `watch` command: fetch → text snapshot → analyze
-tests/                 71 tests (pytest); no network needed
+tests/                 93 tests (pytest); no network needed
 ```
 
 Run the tests with `pip install pytest && python -m pytest -q`.
 
 ## Limitations
 
-- Verify measures support in the two versions you give it, not truth in the world. It can also be wrong: in
-  one recorded run it rejected the true line "Max team size changed from six to four". That is why pulled
-  lines stay visible with their evidence, and are never silently deleted.
+- Verify measures support in the two versions you give it, not truth in the world. It can also be wrong.
+  With the template brief it has rejected true lines such as "Demo video limit changed from no longer than
+  five minutes to no longer than three minutes". That is why pulled lines stay visible with their evidence,
+  are never silently deleted, and get one model rewrite when a model is configured.
 - The watcher reads static HTML. Rules pages that are rendered by JavaScript need their text pasted in.
 - Replay mode only covers the bundled sample. Any other text needs a key.
 

@@ -22,22 +22,25 @@ export function clear(node) {
 }
 
 // Render `text` with the given [start, end) ranges wrapped in <mark>.
+// Offsets are Unicode code points (Python string indices, as Clocked returns them), so the text is
+// indexed through Array.from() rather than UTF-16 String.slice().
 export function highlighted(text, ranges, cls = "") {
+  const cps = Array.from(text);
   const frag = document.createDocumentFragment();
   const rs = (ranges || [])
-    .filter((r) => Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] < r[1] && r[1] <= text.length)
+    .filter((r) => Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] >= 0 && r[0] < r[1] && r[1] <= cps.length)
     .sort((a, b) => a[0] - b[0]);
   let pos = 0;
   let first = null;
   for (const [s, e] of rs) {
     if (s < pos) continue;
-    frag.append(document.createTextNode(text.slice(pos, s)));
-    const m = el("mark", { class: cls }, text.slice(s, e));
+    frag.append(document.createTextNode(cps.slice(pos, s).join("")));
+    const m = el("mark", { class: cls }, cps.slice(s, e).join(""));
     if (!first) first = m;
     frag.append(m);
     pos = e;
   }
-  frag.append(document.createTextNode(text.slice(pos)));
+  frag.append(document.createTextNode(cps.slice(pos).join("")));
   return { frag, first };
 }
 

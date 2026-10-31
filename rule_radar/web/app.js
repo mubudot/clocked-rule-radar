@@ -1,7 +1,7 @@
 import { el, clear, highlighted, wordDiff, pct } from "./dom.js";
 
 const $ = (id) => document.getElementById(id);
-const state = { report: null, version: "new", filter: "all", sample: null, selected: null };
+const state = { report: null, version: "new", filter: "all", sample: null, selected: null, sources: null };
 
 const PROFILE_FIELDS = [
   ["country_of_residence", "Country of residence", "text", "e.g. Taiwan"],
@@ -99,6 +99,7 @@ async function run() {
     const rep = await api("/api/analyze", { old: $("oldText").value, new: $("newText").value, profile: readProfile() });
     state.report = rep;
     state.selected = null;
+    state.sources = rep.versions;
     render();
     $("results").hidden = false;
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -117,8 +118,9 @@ async function checkClaims() {
   const btn = $("checkBtn");
   btn.disabled = true;
   try {
-    const out = await api("/api/check", { old: $("oldText").value, new: $("newText").value, claims });
-    for (const row of out.claims) list.append(claimItem(row, row.claim, true));
+    const sources = { old: $("oldText").value, new: $("newText").value };  // evidence offsets refer to these
+    const out = await api("/api/check", { ...sources, claims });
+    for (const row of out.claims) list.append(claimItem(row, row.claim, true, sources));
   } catch (e) {
     list.append(el("li", { class: "empty" }, `Check failed: ${e.message}`));
   } finally {
@@ -151,23 +153,30 @@ function render() {
 
 function renderVerdict(r) {
   const v = clear($("verdict"));
+  const a = r.assessment || {};
   const an = r.action_needed;
   const c = r.counts || {};
   const act = r.changes.filter((x) => x.rank && x.rank.label === "act").length;
   const notMine = r.changes.filter((x) => x.rank && x.rank.label === "not_your_case").length;
-  const yes = an ? an.decision : act > 0;
-  v.classList.toggle("calm", !yes);
+  const unknown = a.action === "unknown";
+  const yes = a.action === "yes";
+  v.classList.toggle("calm", a.action === "no");
+  v.classList.toggle("unknown", unknown);
+  let says;
+  if (unknown) says = `Could not rank the changes for you (${(a.failed_stages || []).join(", ")} failed). Read every change below yourself.`;
+  else if (act) says = `${act} ${act > 1 ? "changes affect" : "change affects"} what you must do before the deadline.`;
+  else says = yes ? "Rerank says you need to act; see the changes below." : "No change needs action from you.";
   v.append(
-    el("div", { class: "big" }, el("small", {}, "Action needed"), yes ? "Yes" : "No",
-      an && typeof an.probability === "number" ? el("span", { class: "score" }, ` ${pct(an.probability)}`) : null),
-    el("div", { class: "says" },
-      act ? `${act} ${act > 1 ? "changes affect" : "change affects"} what you must do before the deadline.` : "No change needs action from you.",
-      notMine ? ` ${notMine} ${notMine > 1 ? "changes apply" : "change applies"} to other entrants only.` : "",
+    el("div", { class: "big" }, el("small", {}, "Action needed"), unknown ? "Unknown" : yes ? "Yes" : "No",
+      !unknown && an && typeof an.probability === "number" ? el("span", { class: "score" }, ` ${pct(an.probability)}`) : null),
+    el("div", { class: "says" }, says,
+      !unknown && notMine ? ` ${notMine} ${notMine > 1 ? "changes apply" : "change applies"} to other entrants only.` : "",
+      a.complete === false && !unknown ? el("div", { class: "notverified" }, `Incomplete: ${(a.failed_stages || []).join(", ") || "Verify"} did not fully run — see Pipeline.`) : null,
       el("div", { class: "hint" }, `${r.usage.calls} Clocked calls · ${r.usage.credits} credits · ${(r.elapsed_ms / 1000).toFixed(1)} s`
         + (r.usage.replayed ? " · replayed recordings" : ""))),
     el("div", { class: "counts" },
-      count(c.material || 0, "rule changes"), count(c.new || 0, "new"), count(c.removed || 0, "removed"),
-      count(c.wording || 0, "wording only")),
+      count(c.material || 0, "rule changes"), count((c.new || 0) + (c.unconfirmed || 0), "new / unconfirmed"),
+      count(c.removed || 0, "removed"), count(c.wording || 0, "wording only")),
   );
 }
 
@@ -178,7 +187,7 @@ function renderBrief(b) {
   $("briefSource").textContent = "";
   $("briefSource").append(
     b.verified ? `Every line checked by Verify${typeof b.grounded === "number" ? ` · grounded ${pct(b.grounded)}` : ""}`
-      : el("span", { class: "notverified" }, "NOT VERIFIED — Verify did not run"),
+      : el("span", { class: "notverified" }, b.partial ? "PARTLY VERIFIED — some lines got no judgment" : "NOT VERIFIED — Verify did not run"),
     ` · written by ${b.source}`);
   if (!b.lines.length) list.append(el("li", { class: "empty" }, "Nothing in the brief survived verification."));
   for (const ln of b.lines) list.append(claimItem(ln, ln.text, false));
@@ -187,7 +196,7 @@ function renderBrief(b) {
   for (const ln of b.rejected) rej.append(claimItem(ln, ln.claim, true));
 }
 
-function claimItem(row, text, showVerdict) {
+function claimItem(row, text, showVerdict, sources = null) {
   const ev = row.evidence;
   const why = [];
   if (row.repaired_from) why.push(el("span", { class: "repaired" }, "rewritten"), el("span", { class: "why" }, `Verify rejected: “${row.repaired_from}”`));
@@ -202,7 +211,7 @@ function claimItem(row, text, showVerdict) {
   const go = () => {
     select(li);
     if (ev && Number.isInteger(ev.start)) showSource(ev.document === "old" ? "old" : "new", [[ev.start, ev.end]], row.status === "rejected" ? "" : "ok",
-      `Verify evidence for: “${text}”`);
+      `Verify evidence for: “${text}”`, sources);
     else {
       const ch = (row.change_ids || []).map((id) => state.report.changes.find((c) => c.id === id)).find(Boolean);
       if (ch) focusChange(ch); else showSource(state.version, [], "", "Verify returned no passage for this line.");
@@ -242,7 +251,8 @@ function renderChanges() {
         el("span", { class: `pill ${label}` }, LABELS[label] || "Unranked"),
         el("span", { class: "sec" }, c.section || "Rules"),
         el("span", { class: "meta" }, MATERIALITY[c.materiality] || c.materiality,
-          c.compare && c.compare.kind ? ` (${String(c.compare.kind).replace(/_/g, " ")}, ${pct(c.compare.confidence)})` : ""),
+          c.compare && c.compare.kind ? ` (${String(c.compare.kind).replace(/_/g, " ")}, ${pct(c.compare.confidence)})` : "",
+          c.shortened_for_rerank ? " · ranked on a shortened passage" : ""),
         rel !== null ? el("span", { class: "rel", title: "Rerank relevance for your situation" },
           el("span", { class: "bar" }, el("i", { style: null })), pct(rel)) : null),
       diffBlock(c));
@@ -321,10 +331,12 @@ function select(node) {
   node.classList.add("sel");
 }
 
-function showSource(version, ranges = [], cls = "", note = "") {
+function showSource(version, ranges = [], cls = "", note = "", sources = null) {
   state.version = version;
+  if (sources) state.sources = sources;          // a rumour check ran on these exact texts
+  else if (ranges.length || !state.sources) state.sources = state.report ? state.report.versions : null;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === version)));
-  const text = state.report ? state.report.versions[version] : "";
+  const text = state.sources ? state.sources[version] : "";
   const pre = clear($("sourceText"));
   const { frag, first } = highlighted(text, ranges, cls);
   pre.append(frag);

@@ -15,7 +15,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from difflib import SequenceMatcher
+
 from ..clauses import Change, Clause
+
+RESTATED_KINDS = {"verbatim", "restated", None}   # "elaborated" / "different" are not cosmetic
 
 INSTRUCTIONS = (
     "Document 'old' is the previous version of a contest's official rules and 'new' is the current "
@@ -39,10 +43,44 @@ def _touching(clauses: list[Clause], passage: dict | None) -> list[Clause]:
     hits = []
     for c in clauses:
         ov = c.overlaps(s, e)
-        # count a clause when the passage covers a real part of it (not a 1-char brush)
-        if ov >= min(12, len(c.text)) or ov >= 0.5 * len(c.text):
+        # count a clause when the passage sits inside it (however short, e.g. "six" vs "four")
+        # or covers a real part of it (a passage spanning a heading brushes the next clause by a few chars)
+        if ov and (c.contains(s, e) or ov >= min(12, len(c.text)) or ov >= 0.5 * len(c.text)):
             hits.append(c)
     return hits
+
+
+def _changed_ranges(old: Clause, new: Clause) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Absolute character ranges that differ between an edited old/new clause pair."""
+    sm = SequenceMatcher(None, old.text, new.text, autojunk=False)
+    o, n = [], []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            continue
+        if i2 > i1:
+            o.append((old.start + i1, old.start + i2))
+        if j2 > j1:
+            n.append((new.start + j1, new.start + j2))
+    return o, n
+
+
+def _covered(ranges: list[tuple[int, int]], spans: list[tuple[int, int]]) -> bool:
+    """Every changed range lies inside one restated passage."""
+    return all(any(s <= a and b <= e for s, e in spans) for a, b in ranges)
+
+
+def _span(p: dict | None) -> tuple[int, int] | None:
+    if not p or not isinstance(p.get("start"), int) or not isinstance(p.get("end"), int):
+        return None
+    return p["start"], p["end"]
+
+
+def _cosmetic(ch: Change, restated: list) -> bool:
+    """An edit is wording-only when restated passages cover every changed part on both sides."""
+    o_ranges, n_ranges = _changed_ranges(ch.old, ch.new)  # type: ignore[arg-type]
+    o_spans = [sp for n in restated if (sp := _span(n[1].get("old")))]
+    n_spans = [sp for n in restated if (sp := _span(n[1].get("new")))]
+    return _covered(o_ranges, o_spans) and _covered(n_ranges, n_spans)
 
 
 def _findings(resp: dict[str, Any]) -> list[tuple[str, dict]]:
@@ -54,6 +92,8 @@ def _findings(resp: dict[str, Any]) -> list[tuple[str, dict]]:
                 a, b = f.get("a"), f.get("b")
                 if swap:
                     a, b = b, a
+                if rel == "restated" and f.get("kind") not in RESTATED_KINDS:
+                    rel = "related"   # elaborated/different: same topic, not proof of same meaning
                 out.append((rel, {"kind": f.get("kind"), "confidence": f.get("confidence"),
                                   "old": a, "new": b}))
     return out
@@ -79,7 +119,12 @@ def interpret(resp: dict[str, Any], changes: list[Change], old: list[Clause],
         conflicts = [n for n in notes if n[0] == "conflict"]
         restated = [n for n in notes if n[0] == "restated"]
         if ch.status == "edited":
-            materiality = "material" if conflicts else ("wording" if restated else "unconfirmed")
+            if conflicts:
+                materiality = "material"
+            elif restated and _cosmetic(ch, restated):
+                materiality = "wording"
+            else:
+                materiality = "unconfirmed"
         elif conflicts:
             materiality = "material"
         elif restated:

@@ -4,7 +4,7 @@
   "endpoint": "extract",
   "credits": 6.0,
   "cost_usd": 0.001195,
-  "model_ms": 147.8,
+  "model_ms": 149.6,
   "attempts": 1,
   "replayed": false
  },
@@ -96,7 +96,7 @@
    }
   },
   "timing": {
-   "read_ms": 147,
+   "read_ms": 149,
    "forwards": {
     "fields": [
      7,
@@ -108,14 +108,14 @@
      "reader": "recognition",
      "doc": 0,
      "branches": 2,
-     "generate": 100,
+     "generate": 101,
      "locate": 0,
      "verify": 44,
      "assemble": 0
     }
    },
-   "total_ms": 147,
-   "server_ms": 229
+   "total_ms": 149,
+   "server_ms": 263
   }
  }
 }

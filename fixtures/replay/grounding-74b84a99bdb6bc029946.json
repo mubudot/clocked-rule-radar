@@ -4,14 +4,14 @@
   "endpoint": "grounding",
   "credits": 4.0,
   "cost_usd": 0.000797,
-  "model_ms": 87.8,
+  "model_ms": 87.6,
   "attempts": 1,
   "replayed": false
  },
  "response": {
   "model": "clocked-1.0",
-  "grounded": 0.0042,
-  "ungrounded": 0.9958,
+  "grounded": 0.0054,
+  "ungrounded": 0.9946,
   "verdict": "contradicted",
   "threshold": 0.5,
   "instructions_used": "custom",
@@ -19,13 +19,13 @@
    {
     "id": "new",
     "share": 0,
-    "share_of_answer": 0.0025,
+    "share_of_answer": 0.003,
     "claims": []
    },
    {
     "id": "old",
     "share": 0,
-    "share_of_answer": 0.0017,
+    "share_of_answer": 0.0024,
     "claims": []
    }
   ],
@@ -35,14 +35,14 @@
     "kind": "claim",
     "counted": true,
     "weight": 1,
-    "supported": 0.0042,
-    "contradicted": 0.9908,
-    "not_stated": 0.003,
-    "not_a_claim": 0.002,
+    "supported": 0.0054,
+    "contradicted": 0.9871,
+    "not_stated": 0.0052,
+    "not_a_claim": 0.0023,
     "verdict": "contradicted",
     "sources": {
-     "old": 0.3966,
-     "new": 0.6034
+     "old": 0.4411,
+     "new": 0.5589
     },
     "source": null,
     "evidence": {
@@ -50,7 +50,7 @@
      "quote": "The total prize pool is $10,000.",
      "start": 807,
      "end": 839,
-     "confidence": 0.854
+     "confidence": 0.986
     }
    }
   ],
@@ -60,11 +60,11 @@
   "not_claims": [],
   "weakest_claim": {
    "index": 0,
-   "supported": 0.0042
+   "supported": 0.0054
   },
   "timing": {
-   "read_ms": 196,
-   "total_ms": 198
+   "read_ms": 244,
+   "total_ms": 246
   }
  }
 }

@@ -4,30 +4,30 @@
   "endpoint": "grounding",
   "credits": 4.0,
   "cost_usd": 0.000797,
-  "model_ms": 81.9,
+  "model_ms": 84.2,
   "attempts": 1,
   "replayed": false
  },
  "response": {
   "model": "clocked-1.0",
-  "grounded": 0.9922,
-  "ungrounded": 0.0078,
+  "grounded": 0.9873,
+  "ungrounded": 0.0127,
   "verdict": "grounded",
   "threshold": 0.5,
   "instructions_used": "custom",
   "documents": [
    {
     "id": "new",
-    "share": 0.9982,
-    "share_of_answer": 0.9904,
+    "share": 0.9974,
+    "share_of_answer": 0.9847,
     "claims": [
      0
     ]
    },
    {
     "id": "old",
-    "share": 0.0018,
-    "share_of_answer": 0.0018,
+    "share": 0.0026,
+    "share_of_answer": 0.0026,
     "claims": []
    }
   ],
@@ -37,14 +37,14 @@
     "kind": "claim",
     "counted": true,
     "weight": 1,
-    "supported": 0.9922,
-    "contradicted": 0.0035,
-    "not_stated": 0.0017,
-    "not_a_claim": 0.0026,
+    "supported": 0.9873,
+    "contradicted": 0.0069,
+    "not_stated": 0.0026,
+    "not_a_claim": 0.0032,
     "verdict": "supported",
     "sources": {
-     "old": 0.0018,
-     "new": 0.9982
+     "old": 0.0026,
+     "new": 0.9974
     },
     "source": "new",
     "evidence": {
@@ -60,11 +60,11 @@
   "not_claims": [],
   "weakest_claim": {
    "index": 0,
-   "supported": 0.9922
+   "supported": 0.9873
   },
   "timing": {
-   "read_ms": 260,
-   "total_ms": 261
+   "read_ms": 109,
+   "total_ms": 111
   }
  }
 }

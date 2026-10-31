@@ -1,0 +1,218 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 11.0,
+  "cost_usd": 0.002191,
+  "model_ms": 253.2,
+  "attempts": 1,
+  "replayed": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.7795,
+  "ungrounded": 0.2205,
+  "verdict": "contradicted",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.939,
+    "share_of_answer": 0.7319,
+    "claims": [
+     0,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.061,
+    "share_of_answer": 0.0475,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "New rule in 4. What to submit: Private repositories are not accepted.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0748,
+    "supported": 0.9952,
+    "contradicted": 0.0022,
+    "not_stated": 0.0012,
+    "not_a_claim": 0.0014,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0012,
+     "new": 0.9988
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Private repositories are not accepted.",
+     "start": 803,
+     "end": 841,
+     "confidence": 0.995
+    }
+   },
+   {
+    "claim": "Demo video limit changed from no longer than five minutes to no longer than three minutes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0975,
+    "supported": 0.2762,
+    "contradicted": 0.4627,
+    "not_stated": 0.062,
+    "not_a_claim": 0.1991,
+    "verdict": "contradicted",
+    "sources": {
+     "old": 0.2896,
+     "new": 0.7104
+    },
+    "source": null,
+    "evidence": {
+     "document": "old",
+     "quote": "a demo video no longer than five minutes.",
+     "start": 658,
+     "end": 699,
+     "confidence": 0.571
+    }
+   },
+   {
+    "claim": "Repository rule changed from The repository may be public or private; if private, share it with judges@northwind.example to a link to a public source repository with its full commit history.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.2059,
+    "supported": 0.862,
+    "contradicted": 0.0676,
+    "not_stated": 0.0327,
+    "not_a_claim": 0.0377,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0615,
+     "new": 0.9385
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "The repository may be public or private; if private, share it with judges@northwind.example.",
+     "start": 700,
+     "end": 792,
+     "confidence": 0.989
+    }
+   },
+   {
+    "claim": "Top prize changed from $5,000 to $6,000.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0433,
+    "supported": 0.951,
+    "contradicted": 0.024,
+    "not_stated": 0.0131,
+    "not_a_claim": 0.0119,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0117,
+     "new": 0.9883
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "First place receives $6,000, second place receives $2,500, and third place receives $1,500.",
+     "start": 889,
+     "end": 980,
+     "confidence": 0.795
+    }
+   },
+   {
+    "claim": "Submission deadline changed from November 20, 2026 at 11:59 p.m. Pacific Time to November 14, 2026 at 11:59 p.m. Pacific Time.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1365,
+    "supported": 0.6812,
+    "contradicted": 0.1846,
+    "not_stated": 0.0433,
+    "not_a_claim": 0.0909,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0908,
+     "new": 0.9092
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Prize payout changed from bank transfer to through Wise.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0607,
+    "supported": 0.6533,
+    "contradicted": 0.1312,
+    "not_stated": 0.0596,
+    "not_a_claim": 0.1558,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0499,
+     "new": 0.9501
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "Prizes are paid through Wise within 30 days of verification; winners must submit a tax form before payment.",
+     "start": 981,
+     "end": 1088,
+     "confidence": 1
+    }
+   },
+   {
+    "claim": "Building period changed from October 22 to November 20, 2026 to October 22 to November 14, 2026.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.104,
+    "supported": 0.7622,
+    "contradicted": 0.092,
+    "not_stated": 0.0451,
+    "not_a_claim": 0.1006,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.1524,
+     "new": 0.8476
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Existing-work rule changed from Projects started before the building period are allowed if the new work is clearly described to Only projects started during the building period are eligible. Earlier projects are not eligible, even with substantial changes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.2774,
+    "supported": 0.8925,
+    "contradicted": 0.0543,
+    "not_stated": 0.0255,
+    "not_a_claim": 0.0276,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0232,
+     "new": 0.9768
+    },
+    "source": "new"
+   }
+  ],
+  "unsupported_claims": [
+   1
+  ],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 1,
+   "supported": 0.2762
+  },
+  "timing": {
+   "read_ms": 261,
+   "total_ms": 264
+  }
+ }
+}
