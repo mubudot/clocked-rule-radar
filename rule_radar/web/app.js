@@ -306,7 +306,7 @@ function renderFacts(rows) {
     };
     const cell = el("td", { class: "v", tabindex: 0 });
     if (f.status === "changed" || f.status === "removed") cell.append(el("span", { class: "was" }, val("old")));
-    cell.append(val(f.status === "removed" ? "old" : "new"));
+    cell.append(f.status === "removed" ? el("span", { class: "ns" }, "no longer stated") : val("new"));
     if (f.uncertain) cell.append(el("span", { class: "lowconf" }, " · low confidence, check"));
     const go = () => {
       const side = f.new && f.new.spans && f.new.spans.length ? "new" : "old";
