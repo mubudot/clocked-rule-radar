@@ -216,6 +216,7 @@ function claimItem(row, text, showVerdict, sources = null) {
     el("span", { class: "score", title: "Verify: probability the sources support this line" }, typeof row.supported === "number" ? pct(row.supported) : ""));
   const go = () => {
     select(li);
+    revealSource();
     if (ev && Number.isInteger(ev.start)) showSource(ev.document === "old" ? "old" : "new", [[ev.start, ev.end]], row.status === "rejected" ? "" : "ok",
       `Verify evidence for: “${text}”`, sources);
     else {
@@ -287,6 +288,7 @@ function diffBlock(c) {
 }
 
 function focusChange(c) {
+  revealSource();
   const node = document.querySelector(`.change[data-id="${CSS.escape(c.id)}"]`);
   if (node) select(node);
   const side = c.new ? "new" : "old";
@@ -311,6 +313,7 @@ function renderFacts(rows) {
     const go = () => {
       const side = f.new && f.new.spans && f.new.spans.length ? "new" : "old";
       showSource(side, (f[side] && f[side].spans) || [], "", `Extract: ${f.label}`);
+      revealSource();
     };
     cell.addEventListener("click", go);
     tb.append(el("tr", { class: f.status }, el("td", {}, f.label), cell));
@@ -336,6 +339,15 @@ function renderStages(r) {
 function select(node) {
   document.querySelectorAll(".sel").forEach((n) => n.classList.remove("sel"));
   node.classList.add("sel");
+}
+
+// The side column is sticky and scrolls on its own: bring Source into view when the user asks where something comes from.
+function revealSource() {
+  const card = $("sourceCard"), side = card.closest(".col-side");
+  if (!side || getComputedStyle(side).position !== "sticky") return;
+  const top = card.getBoundingClientRect().top - side.getBoundingClientRect().top + side.scrollTop;
+  if (top < side.scrollTop || top + card.offsetHeight > side.scrollTop + side.clientHeight)
+    side.scrollTo({ top: Math.max(0, Math.min(top, top + card.offsetHeight - side.clientHeight)), behavior: "smooth" });
 }
 
 function showSource(version, ranges = [], cls = "", note = "", sources = null) {

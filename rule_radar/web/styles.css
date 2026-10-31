@@ -103,7 +103,8 @@ button[disabled] { opacity: .6; cursor: progress; }
 
 /* layout */
 .layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 18px; align-items: start; }
-.col-side { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 18px; }
+.col-side { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 18px;
+  max-height: calc(100vh - 28px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .col-side .card + .card { margin-top: 0; }
 
 /* brief */
@@ -206,7 +207,7 @@ mark.ok { background: var(--ins); box-shadow: 0 0 0 2px var(--ins); }
 
 @media (max-width: 980px) {
   .layout, .versions { grid-template-columns: 1fr; }
-  .col-side { position: static; }
+  .col-side { position: static; max-height: none; overflow: visible; }
   .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .verdict { grid-template-columns: 1fr; }
