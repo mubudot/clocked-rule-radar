@@ -63,8 +63,9 @@ python -m rule_radar check samples/northwind_v1.md samples/northwind_v2.md \
    **Check claims**. It says **Contradicted by the rules**, quoting “The total prize pool is $10,000.” (before).
 6. In **Key facts**, click the **Submission deadline** value. **Source** switches to **Now** and highlights
    “November 14, 2026 at 11:59 p.m. Pacific Time”.
-7. Switch **Sample** to “Same Northwind rules, a five-person team in Quebec” and scan again. Only the
-   profile changed (country and team size), so Compare and Extract are the same, but Rerank moves the
+7. Switch **Sample** to “Same Northwind rules, a five-person team in Quebec”, scan again and click
+   **Act on this**. Only the profile changed (country and team size), so Compare and Extract are the
+   same, but Rerank moves the
    Quebec exclusion from *Not your case* to *Act on this*, and the new four-person team limit becomes
    *Act on this* too (12 *Act on this*, 0 *Not your case*). Both now appear in the brief, the team line with a
    **?** badge at 63%; the Taiwan entrant's brief mentions neither.

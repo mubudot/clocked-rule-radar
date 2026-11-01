@@ -104,6 +104,14 @@ async function loadSamples() {
   if (list.length) { sel.value = list[0].name; await pickSample(list[0].name); }
 }
 
+// A report belongs to the inputs it was made from: new or reset inputs hide it and start from "All".
+function clearReport() {
+  state.report = null;
+  state.selected = null;
+  state.filter = "all";
+  $("results").hidden = true;
+}
+
 async function pickSample(name) {
   if (!name) {
     state.sample = null;
@@ -113,6 +121,7 @@ async function pickSample(name) {
     return;
   }
   const s = await api(`/api/samples/${encodeURIComponent(name)}`);
+  clearReport();
   state.sample = s;
   state.sampleName = name;
   $("sampleSelect").value = name;

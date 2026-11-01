@@ -152,12 +152,23 @@ def test_brief_with_only_placeholder_lines_is_an_error(reply):
 
 
 def test_repair_ignores_a_quoted_placeholder():
+    rej = [{"index": 0, "text": "x", "verdict": "not_stated", "evidence": None}]
     reply = 'Shape: {"lines": [{"index": 0, "text": "..."}]} Answer: {"lines": [{"index": 0, "text": "Fixed."}]}'
-    assert summarize.repair([{"index": 0, "text": "x", "verdict": "not_stated", "evidence": None}],
-                            _llm(reply)) == {0: "Fixed."}
-    only_shape = 'Shape: {"lines": [{"index": 0, "text": "..."}]} and then'
-    assert summarize.repair([{"index": 0, "text": "x", "verdict": "not_stated", "evidence": None}],
-                            _llm(only_shape)) == {}
+    assert summarize.repair(rej, _llm(reply)) == {0: "Fixed."}
+    # an answer followed by the quoted shape still uses the answer
+    trailing = '{"lines": [{"index": 0, "text": "Fixed."}]}\nShape was {"lines": [{"index": 0, "text": "..."}]}'
+    assert summarize.repair(rej, _llm(trailing)) == {0: "Fixed."}
+    # only the quoted shape: an error (the repair stage reports it), not a silent "0 lines dropped"
+    with pytest.raises(LLMError):
+        summarize.repair(rej, _llm('Shape: {"lines": [{"index": 0, "text": "..."}]} and then'))
+    # a deliberate drop is still a drop
+    assert summarize.repair(rej, _llm('{"lines": [{"index": 0, "text": null}]}')) == {0: None}
+
+
+def test_brief_answer_followed_by_quoted_shape_uses_the_answer():
+    reply = '{"lines": [{"text": "Deadline moved.", "change_ids": ["new:1.1"]}]}\nShape: {"lines": [{"text": "..."}]}'
+    lines, _ = summarize.write_brief(_CHANGE, [], _llm(reply))
+    assert lines == [{"text": "Deadline moved.", "change_ids": ["new:1.1"]}]
 
 
 def test_offline_brief_skips_other_cases():

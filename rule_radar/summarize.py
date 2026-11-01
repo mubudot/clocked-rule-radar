@@ -100,17 +100,25 @@ def _json_objects(text: str) -> list[Any]:
 _PLACEHOLDER = re.compile(r"[\s.\u2026]*")
 
 
+def _usable(lines: list[Any]) -> list[dict[str, Any]]:
+    return [ln for ln in lines if isinstance(ln, dict)
+            and not (isinstance(ln.get("text"), str) and _PLACEHOLDER.fullmatch(ln["text"]))]
+
+
 def _parse_lines(text: str) -> list[dict[str, Any]]:
-    """The model's 'lines' list. When a reply also quotes the shape from the prompt (some models think
-    aloud first), the last object with a 'lines' list is the answer. Placeholder lines ("...") are dropped."""
+    """The model's 'lines' list. Some models think aloud and quote the shape from the prompt
+    ({"text": "..."}); placeholder lines are dropped, and the last object that still has a usable
+    line (or is deliberately empty) is the answer. Only placeholders is an error, so it is retried."""
     objs = _json_objects(text)
     if not objs:
         raise LLMError("model reply is not valid JSON", retryable=True)
     found = [o["lines"] for o in objs if isinstance(o, dict) and isinstance(o.get("lines"), list)]
     if not found:
         raise LLMError("model reply has no 'lines' list", retryable=True)
-    return [ln for ln in found[-1] if isinstance(ln, dict)
-            and not (isinstance(ln.get("text"), str) and _PLACEHOLDER.fullmatch(ln["text"]))]
+    usable = [_usable(lines) for lines in found if not lines or _usable(lines)]
+    if not usable:
+        raise LLMError("model reply has only placeholder lines", retryable=True)
+    return usable[-1]
 
 
 def _clause_line(c: dict[str, Any]) -> str:
