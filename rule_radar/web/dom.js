@@ -71,3 +71,14 @@ export function wordDiff(a, b) {
 }
 
 export const pct = (x) => (typeof x === "number" ? `${Math.round(x * 100)}%` : "—");
+
+// Replay matches exact rules and profile inputs. Rumours are recorded separately, so any
+// subset/order of the sample claims is supported (each claim makes its own request).
+export function replayDifferences(sample, current) {
+  const keys = new Set([...Object.keys(sample?.profile || {}), ...Object.keys(current.profile)]);
+  return {
+    rules: !sample || current.old !== sample.old || current.new !== sample.new,
+    profile: !sample || [...keys].some((key) => current.profile[key] !== sample.profile[key]),
+    claims: current.claims.some((claim) => !(sample?.claims || []).includes(claim)),
+  };
+}

@@ -62,6 +62,9 @@ button, select, input, textarea { font: inherit; color: inherit; }
 
 /* compose */
 .compose-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.compose-head .row { display: flex; flex-wrap: wrap; max-width: 100%; min-width: 0; }
+.compose-head .inline { flex-wrap: wrap; max-width: 100%; min-width: 0; }
+#sampleSelect { max-width: 100%; min-width: 0; }
 .inline { display: inline-flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--muted); }
 select, input[type=text], input[type=number], input[type=date] { border: 1px solid var(--line); border-radius: 9px;
   padding: 7px 10px; background: #fff; min-width: 0; }
@@ -79,6 +82,10 @@ textarea:focus, input:focus, select:focus, button:focus-visible { outline: 2px s
 .profile-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); }
 .run-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; }
 .run-row.tight { margin-top: 10px; justify-content: flex-end; }
+.scan-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 0; }
+.replay-note { max-width: 65ch; padding: 10px 12px; border: 1px solid var(--check); border-radius: 10px;
+  background: var(--check-soft); color: var(--ink-2); font-size: .82rem; overflow-wrap: anywhere; }
+.reset-sample { margin-top: 6px; padding: 3px 9px; font-size: .78rem; }
 button { border: 1px solid var(--ink); background: var(--card); border-radius: 10px; padding: 8px 16px; cursor: pointer; }
 button:hover { background: #f1ede3; }
 button.primary { background: var(--ink); color: #fff; padding: 11px 22px; font-weight: 600; letter-spacing: .01em; }
@@ -206,6 +213,7 @@ mark.ok { background: var(--ins); box-shadow: 0 0 0 2px var(--ins); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 980px) {
+  .run-row { flex-wrap: wrap; }
   .layout, .versions { grid-template-columns: 1fr; }
   .col-side { position: static; max-height: none; overflow: visible; }
   .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

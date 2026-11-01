@@ -34,6 +34,21 @@ def test_replay_run_with_recorded_model_brief(v1, v2, profile):
     assert rep["brief"]["source"].startswith("replay:anthropic")
     assert rep["stages"]["verify"]["status"] == "ok"
     assert all(ln["status"] in ("verified", "check") for ln in rep["brief"]["lines"])
+    assert rep["usage"]["calls"] == 5 and rep["usage"]["credits"] == 44
+    assert rep["counts"] == {"material": 12, "new": 2, "wording": 1}
+    assert rep["stages"]["compare"]["outcomes"] == {"material": 12, "wording": 1, "unconfirmed": 0}
+    assert rep["stages"]["extract"]["outcomes"] == {
+        "old": {"found": 10, "not_stated": 1, "low_confidence": 0},
+        "new": {"found": 11, "not_stated": 0, "low_confidence": 0},
+    }
+    assert rep["stages"]["rerank"]["outcomes"] == {
+        "act": 10, "read_section": 0, "low_impact": 3, "not_your_case": 1, "not_judged": 0,
+    }
+    assert rep["stages"]["verify"]["outcomes"] == {"supported": 7, "weak": 1, "pulled": 0, "not_judged": 0}
+    weak = [ln for ln in rep["brief"]["lines"] if ln["status"] == "check"]
+    assert len(rep["brief"]["lines"]) == 8 and rep["brief"]["rejected"] == []
+    assert [(ln["text"], ln["supported"]) for ln in weak] == [
+        ("Demo video limit shortened from five minutes to three minutes.", 0.6976)]
 
 
 def test_every_stage_failing_still_returns_a_report(v1, v2):
@@ -44,6 +59,16 @@ def test_every_stage_failing_still_returns_a_report(v1, v2):
     assert rep["brief"]["verified"] is False
     assert {c["materiality"] for c in rep["changes"]} <= {"unconfirmed", "new", "removed"}
     assert rep["fields"] == []
+    assert st["compare"]["outcomes"]["unconfirmed"] > 0
+    assert st["extract"]["outcomes"] == {"old": None, "new": None}
+    assert st["rerank"]["outcomes"]["not_judged"] == len(rep["changes"])
+    assert st["verify"]["outcomes"] == {
+        "supported": 0, "weak": 0, "pulled": 0, "not_judged": len(rep["brief"]["lines"]),
+    }
+    for name in ("compare", "extract", "rerank", "verify"):
+        assert st[name]["usage"]["calls"] == 0
+        assert st[name]["usage"]["failed_calls"] >= 1
+        assert st[name]["usage"]["credits"] == 0
 
 
 def test_model_failure_falls_back_to_template(v1, v2):
@@ -87,6 +112,8 @@ def test_rejected_line_is_repaired_and_reverified(v1, v2):
     assert lines[1]["repaired_from"] == "Prize pool is $12,000."
     assert rep["brief"]["rejected"] == []
     assert rep["stages"]["repair"]["status"] == "ok"
+    # The Verify outcome describes the initial gate, even after repair accepts a rewrite.
+    assert rep["stages"]["verify"]["outcomes"] == {"supported": 1, "weak": 0, "pulled": 1, "not_judged": 0}
     assert sum(1 for e, _ in fc.calls if e == "grounding") == 2
 
 
@@ -128,3 +155,41 @@ def test_check_claims_reports_a_failed_claim(v1, v2):
     fc = FakeClient({"grounding": ClockedError("busy", status=429, endpoint="grounding")})
     out = check_claims(v1, v2, ["x"], client=fc)
     assert out["claims"][0]["status"] == "unverified" and "busy" in out["claims"][0]["error"]
+
+
+def test_extract_outcomes_distinguish_missing_and_low_confidence_per_version():
+    old, new = "## T\nTeams of six.\n", "## T\nTeams of four.\n"
+    fc = FakeClient({
+        "extract": lambda p: {"fields": {
+            "max_team_size": {"value": "six" if p["text"] == old else "four",
+                              "confidence": 0.59 if p["text"] == old else 0.6},
+            "excluded_residents": {"value": [], "confidence": 0.1},
+            "prize_pool": {"value": None, "confidence": 0.1},
+            "video_limit": {"value": "", "confidence": 0.1},
+        }},
+    })
+    rep = analyze(old, new, client=fc)
+    assert rep["stages"]["extract"]["status"] == "ok"
+    assert rep["stages"]["extract"]["outcomes"] == {
+        "old": {"found": 1, "not_stated": 10, "low_confidence": 1},
+        "new": {"found": 1, "not_stated": 10, "low_confidence": 0},
+    }
+
+
+def test_partial_verify_outcomes_keep_status_and_usage(v1, v2, profile):
+    fc = FakeClient({"grounding": {"claims": [
+        {"verdict": "supported", "supported": 0.8},
+        {"verdict": "supported", "supported": 0.7999},
+        {"verdict": "contradicted"},
+        {"verdict": "not_stated"},
+        {"verdict": "not_a_claim"},
+    ]}}, fallback=ReplayClient(REPLAY))
+    rep = analyze(v1, v2, client=fc, profile=profile,
+                  llm=FakeLLM([_brief("Strong.", "Weak.", "Wrong.", "Absent.", "Opinion.", "Unjudged.")]),
+                  do_repair=False)
+    stage = rep["stages"]["verify"]
+    assert stage["outcomes"] == {"supported": 1, "weak": 1, "pulled": 3, "not_judged": 1}
+    assert stage["status"] == "partial" and "no judgment" in stage["note"]
+    assert stage["usage"]["calls"] == 1 and stage["usage"]["credits"] == 1
+    assert rep["brief"]["partial"] and not rep["assessment"]["complete"]
+    assert [ln["status"] for ln in rep["brief"]["lines"]] == ["verified", "check", "unverified"]

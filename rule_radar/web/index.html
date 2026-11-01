@@ -52,7 +52,13 @@
     </fieldset>
     <div class="run-row">
       <p class="hint" id="runHint">Clocked Compare, Extract, Rerank and Verify run on the two versions; a model writes the brief.</p>
-      <button id="runBtn" class="primary" type="button">Scan for changes</button>
+      <div class="scan-controls">
+        <div class="replay-note" id="replayNote" role="note" hidden>
+          Replay mode has recordings only for the bundled sample as loaded. With edited text, profile or claims the Clocked stages will fail (shown in red). Add a CLOCKED_API_KEY to analyse your own text.
+          <button class="reset-sample" type="button">Reset sample</button>
+        </div>
+        <button id="runBtn" class="primary" type="button">Scan for changes</button>
+      </div>
     </div>
   </section>
 
@@ -90,6 +96,10 @@
           </header>
           <div class="chips-row" id="claimChips"></div>
           <textarea id="claimText" class="claims" rows="4" placeholder="One claim per line, e.g. “The deadline was extended to November 24.”"></textarea>
+          <div class="replay-note" id="claimReplayNote" role="note" hidden>
+            Replay mode has recordings only for the bundled sample as loaded. With edited text, profile or claims the Clocked stages will fail (shown in red). Add a CLOCKED_API_KEY to analyse your own text.
+            <button class="reset-sample" type="button">Reset sample</button>
+          </div>
           <div class="run-row tight"><button id="checkBtn" type="button">Check claims</button></div>
           <ol class="brief" id="checkList"></ol>
         </article>

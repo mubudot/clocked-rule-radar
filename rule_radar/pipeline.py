@@ -114,13 +114,22 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     else:
         changes = compare.local_only(aligned)
         st.fail("compare", cmp_err, "every edit is shown as unconfirmed (local diff only)")
+    st.items["compare"]["outcomes"] = {
+        kind: sum(c["materiality"] == kind for c in changes)
+        for kind in ("material", "wording", "unconfirmed")
+    }
 
     fields: list[dict[str, Any]] = []
-    if old_res and new_res:
-        fields = extract.diff_fields(extract.interpret(old_res[0], old_text), extract.interpret(new_res[0], new_text))
+    old_fields = extract.interpret(old_res[0], old_text) if old_res else None
+    new_fields = extract.interpret(new_res[0], new_text) if new_res else None
+    if old_fields is not None and new_fields is not None:
+        fields = extract.diff_fields(old_fields, new_fields)
         st.ok("extract", note="old and new version read")
     else:
         st.fail("extract", old_err or new_err, "key-facts table not available")
+    st.items["extract"]["outcomes"] = {
+        "old": _extract_outcomes(old_fields), "new": _extract_outcomes(new_fields),
+    }
 
     # Phase 2: Rerank orders what is left by impact on this entrant.
     ranks, action_needed = None, None
@@ -157,6 +166,12 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
     for c in changes:
         c["shortened_for_rerank"] = c["id"] in shortened
     changes = rerank.order(changes, ranks)
+    st.items["rerank"]["outcomes"] = {
+        label: sum((c.get("rank") or {}).get("label") == label for c in changes)
+        for label in ("act", "read_section", "low_impact", "not_your_case")
+    }
+    st.items["rerank"]["outcomes"]["not_judged"] = sum(
+        not c.get("rank") for c in changes if c["materiality"] in rerank.RANKABLE)
 
     # Phase 3: the brief (model, or template when there is no model / the model fails).
     brief_source = "template"
@@ -195,6 +210,26 @@ def analyze(old_text: str, new_text: str, *, client: Client, llm: LLM | None = N
                   "ledger_replays": sum(1 for u in st.usage if u.ledger_replay)},
         "elapsed_ms": round((time.monotonic() - t0) * 1000),
     }
+
+
+def _extract_outcomes(reads: dict[str, extract.FieldRead] | None) -> dict[str, int] | None:
+    """Missing fields are not stated; a failed read is unavailable, not an empty result.
+
+    Low confidence is a subset of found fields, matching the key-facts table's flag.
+    """
+    if reads is None:
+        return None
+    found = [reads[name] for name in extract.DEFAULT_FIELDS if name in reads and reads[name].stated]
+    return {"found": len(found), "not_stated": len(extract.DEFAULT_FIELDS) - len(found),
+            "low_confidence": sum(r.confidence < extract.LOW_CONFIDENCE for r in found)}
+
+
+def _verify_outcomes(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Count the initial Verify judgments; repair reports its later result separately."""
+    return {"supported": sum(r["status"] == "verified" for r in rows),
+            "weak": sum(r["status"] == "check" for r in rows),
+            "pulled": sum(r["status"] in verify.PULLED for r in rows),
+            "not_judged": sum(r["status"] == "unverified" for r in rows)}
 
 
 EXIT_CHANGES, EXIT_INCOMPLETE = 3, 4
@@ -242,15 +277,18 @@ def _verify_brief(client: Client, st: _Stages, old_text: str, new_text: str,
     texts = [ln["text"] for ln in lines][:verify.MAX_CLAIMS]
     if not texts:
         st.skip("verify", "nothing to verify")
+        st.items["verify"]["outcomes"] = _verify_outcomes([])
         return {"lines": [], "rejected": [], "grounded": None, "verified": False, "partial": False}
     res, err = st.call("verify", client, "grounding", verify.build_payload(old_text, new_text, texts))
     if not res:
         st.fail("verify", err, "brief is shown as NOT VERIFIED")
         v = verify.unverified(texts)
+        st.items["verify"]["outcomes"] = _verify_outcomes(v["claims"])
         return {"lines": _join(lines, v["claims"]), "rejected": [], "grounded": None, "verified": False,
                 "partial": False}
     v = verify.interpret(res[0], texts)
     st.ok("verify", note=f"grounded {v['grounded']}")
+    st.items["verify"]["outcomes"] = _verify_outcomes(v["claims"])
     rows = _join(lines, v["claims"])
 
     bad = [i for i, r in enumerate(rows) if r["status"] in verify.PULLED]

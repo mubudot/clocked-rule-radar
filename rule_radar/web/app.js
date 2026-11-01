@@ -1,7 +1,8 @@
-import { el, clear, highlighted, wordDiff, pct } from "./dom.js";
+import { el, clear, highlighted, wordDiff, pct, replayDifferences } from "./dom.js";
 
 const $ = (id) => document.getElementById(id);
-const state = { report: null, version: "new", filter: "all", sample: null, selected: null, sources: null };
+const state = { report: null, version: "new", filter: "all", sample: null, selected: null, sources: null,
+  mode: null, replaySample: null, sampleName: null };
 
 const PROFILE_FIELDS = [
   ["country_of_residence", "Country of residence", "text", "e.g. Taiwan"],
@@ -18,6 +19,10 @@ const MATERIALITY = {
   moved: "moved · same content elsewhere",
 };
 const STATUS_BADGE = { verified: "✓", check: "?", rejected: "✗", not_a_claim: "–", unverified: "·" };
+const SUPPORT_LABELS = {
+  check: "Weakly supported: Verify gave this line less than 80% support. Check the source.",
+  verified: "Supported: Verify gave this line at least 80% support.",
+};
 const STAGES = [["diff", "Local diff"], ["compare", "Compare"], ["extract", "Extract"], ["rerank", "Rerank"],
   ["brief", "Brief"], ["verify", "Verify"], ["repair", "Repair"]];
 
@@ -59,8 +64,25 @@ function fillProfile(p = {}) {
   for (const [key] of PROFILE_FIELDS) $(`p_${key}`).value = p[key] ?? "";
 }
 
+function readClaims() {
+  return $("claimText").value.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+function replayInputs() {
+  return { old: $("oldText").value, new: $("newText").value,
+    profile: Object.fromEntries(PROFILE_FIELDS.map(([key]) => [key, $(`p_${key}`).value])),
+    claims: readClaims() };
+}
+
+function updateReplayNotes() {
+  const differences = replayDifferences(state.replaySample, replayInputs());
+  $("replayNote").hidden = state.mode !== "replay" || !Object.values(differences).some(Boolean);
+  $("claimReplayNote").hidden = state.mode !== "replay" || !differences.claims;
+}
+
 async function loadConfig() {
   const cfg = await api("/api/config");
+  state.mode = cfg.mode;
   const chips = clear($("modeChips"));
   const live = cfg.mode !== "replay";
   chips.append(el("span", { class: `chip ${live ? "live" : "replay"}` }, el("span", { class: "dot" }),
@@ -71,6 +93,7 @@ async function loadConfig() {
     : cfg.llm_provider === "offline" ? "Brief: template (no model)" : `Brief: ${cfg.llm_provider} · ${cfg.llm_model}`;
   chips.append(el("span", { class: "chip", id: "briefChip" }, el("span", { class: "dot" }), writer));
   if (!live) $("runHint").textContent = "Replay mode: the bundled sample runs on recorded Clocked responses. Set CLOCKED_API_KEY for your own text.";
+  updateReplayNotes();
 }
 
 async function loadSamples() {
@@ -82,18 +105,31 @@ async function loadSamples() {
 }
 
 async function pickSample(name) {
-  if (!name) { state.sample = null; renderClaimChips([]); return; }
+  if (!name) {
+    state.sample = null;
+    state.replaySample = null;
+    renderClaimChips([]);
+    updateReplayNotes();
+    return;
+  }
   const s = await api(`/api/samples/${encodeURIComponent(name)}`);
   state.sample = s;
+  state.sampleName = name;
+  $("sampleSelect").value = name;
   $("oldText").value = s.old;
   $("newText").value = s.new;
   fillProfile(s.profile);
+  $("claimText").value = "";
+  clear($("checkList"));
   renderClaimChips(s.claims || []);
+  state.replaySample = { ...replayInputs(), claims: [...(s.claims || [])] };
+  updateReplayNotes();
 }
 
 /* ---------- run ---------- */
 
 async function run() {
+  updateReplayNotes();
   const btn = $("runBtn");
   showError("");
   btn.disabled = true;
@@ -117,7 +153,8 @@ async function run() {
 }
 
 async function checkClaims() {
-  const claims = $("claimText").value.split("\n").map((s) => s.trim()).filter(Boolean);
+  updateReplayNotes();
+  const claims = readClaims();
   const list = clear($("checkList"));
   if (!claims.length) return;
   const btn = $("checkBtn");
@@ -139,6 +176,7 @@ function renderClaimChips(claims) {
     row.append(el("button", { type: "button", onclick: () => {
       const t = $("claimText");
       t.value = (t.value.trim() ? t.value.trim() + "\n" : "") + c;
+      updateReplayNotes();
     } }, `“${c}”`));
   }
 }
@@ -170,7 +208,7 @@ function renderVerdict(r) {
   let says;
   const gaps = [...(a.failed_stages || []).map((k) => `${k} failed`), ...(a.partial_stages || []).map((k) => `${k} ran only in part`)];
   if (unknown) says = `Could not rank every change for you (${gaps.join(", ")}). Read every change below yourself.`;
-  else if (act) says = `${act} ${act > 1 ? "changes affect" : "change affects"} what you must do before the deadline.`;
+  else if (act) says = `${act} changed ${act > 1 ? "clauses" : "clause"} marked Act on this — read ${act > 1 ? "them" : "it"} before the deadline.`;
   else says = yes ? "Rerank says you need to act; see the changes below." : "No change needs action from you.";
   v.append(
     el("div", { class: "big" }, el("small", {}, "Action needed"), unknown ? "Unknown" : yes ? "Yes" : "No",
@@ -208,10 +246,12 @@ function claimItem(row, text, showVerdict, sources = null) {
   if (row.repaired_from) why.push(el("span", { class: "repaired" }, "rewritten"), el("span", { class: "why" }, `Verify rejected: “${row.repaired_from}”`));
   if (showVerdict || row.status === "rejected" || row.status === "not_a_claim") {
     const word = { verified: "Supported", check: "Weakly supported", rejected: row.verdict === "not_stated" ? "Not stated in either version" : "Contradicted by the rules", not_a_claim: "Not a factual claim — nothing to check", unverified: row.error ? `Not verified (${row.error})` : "Not verified" }[row.status];
-    why.push(el("span", { class: "why" }, word, ev && ev.quote ? [": ", el("q", {}, ev.quote), ` (${ev.document === "old" ? "before" : "now"})`] : ""));
+    why.push(el("span", { class: row.status === "unverified" && row.error ? "why notverified" : "why" },
+      word, ev && ev.quote ? [": ", el("q", {}, ev.quote), ` (${ev.document === "old" ? "before" : "now"})`] : ""));
   }
+  const supportLabel = SUPPORT_LABELS[row.status] || row.status;
   const li = el("li", { tabindex: 0 },
-    el("span", { class: `badge b-${row.status}`, title: row.status }, STATUS_BADGE[row.status] || "·"),
+    el("span", { class: `badge b-${row.status}`, title: supportLabel, "aria-label": supportLabel }, STATUS_BADGE[row.status] || "·"),
     el("div", {}, el("span", { class: "txt" }, text), ...why),
     el("span", { class: "score", title: "Verify: probability the sources support this line" }, typeof row.supported === "number" ? pct(row.supported) : ""));
   const go = () => {
@@ -220,8 +260,9 @@ function claimItem(row, text, showVerdict, sources = null) {
     if (ev && Number.isInteger(ev.start)) showSource(ev.document === "old" ? "old" : "new", [[ev.start, ev.end]], row.status === "rejected" ? "" : "ok",
       `Verify evidence for: “${text}”`, sources);
     else {
-      const ch = (row.change_ids || []).map((id) => state.report.changes.find((c) => c.id === id)).find(Boolean);
-      if (ch) focusChange(ch); else showSource(state.version, [], "", "Verify returned no passage for this line.");
+      const ch = (row.change_ids || []).map((id) => state.report?.changes.find((c) => c.id === id)).find(Boolean);
+      if (ch) focusChange(ch, "Verify returned no passage for this line; showing the rule change it summarises.");
+      else showSource(state.version, [], "", "Verify returned no passage for this line.", sources);
     }
   };
   li.addEventListener("click", go);
@@ -287,13 +328,13 @@ function diffBlock(c) {
   return d;
 }
 
-function focusChange(c) {
+function focusChange(c, note = null) {
   revealSource();
   const node = document.querySelector(`.change[data-id="${CSS.escape(c.id)}"]`);
   if (node) select(node);
   const side = c.new ? "new" : "old";
   const cl = c[side];
-  showSource(side, [[cl.start, cl.end]], c.materiality === "wording" ? "ok" : "", `${c.section}: ${MATERIALITY[c.materiality] || ""}`);
+  showSource(side, [[cl.start, cl.end]], c.materiality === "wording" ? "ok" : "", note ?? `${c.section}: ${MATERIALITY[c.materiality] || ""}`);
 }
 
 function renderFacts(rows) {
@@ -329,11 +370,25 @@ function renderStages(r) {
     if (s.usage) ms += s.usage.model_ms || 0;
     ol.append(el("li", { class: `stage ${s.status}` }, el("b", {}, label), el("span", { class: "st" }, s.status),
       el("span", { class: "n" }, s.status === "failed" ? `${s.error} → ${s.fallback}` : s.note || ""),
+      s.outcomes ? el("span", { class: "n outcomes" }, stageOutcomes(key, label, s.outcomes)) : null,
       s.usage ? el("span", { class: "n" }, `${s.usage.credits} credits · ${s.usage.calls} call${s.usage.calls !== 1 ? "s" : ""}`
         + (s.usage.failed_calls ? ` · ${s.usage.failed_calls} failed` : "")
         + (s.usage.attempts > s.usage.calls ? ` · ${s.usage.attempts - s.usage.calls} retr${s.usage.attempts - s.usage.calls > 1 ? "ies" : "y"}` : "")) : null));
   }
   $("traceSum").textContent = `${r.usage.credits} credits · ${Math.round(ms)} ms model time`;
+}
+
+function stageOutcomes(key, label, o) {
+  const counts = (pairs) => pairs.map(([name, text]) => `${o[name]} ${text}`).join(" · ");
+  if (key === "compare") return `${label}: ${counts([["material", "material"], ["wording", "wording only"], ["unconfirmed", "unconfirmed"]])}`;
+  if (key === "extract") return `${label}: ` + [["old", "before"], ["new", "now"]].map(([side, text]) => {
+    const f = o[side];
+    return f ? `${text} ${f.found} fields found · ${f.not_stated} not stated · ${f.low_confidence} low confidence` : `${text} unavailable`;
+  }).join("; ");
+  if (key === "rerank") return `${label}: ${counts([["act", "act"], ["read_section", "read section"], ["low_impact", "low impact"], ["not_your_case", "not your case"]])}`
+    + (o.not_judged ? ` · ${o.not_judged} not judged` : "");
+  if (key === "verify") return `${label}: ${counts([["supported", "supported (≥80%)"], ["weak", "weak"], ["pulled", "pulled"], ["not_judged", "not judged"]])}`;
+  return "";
 }
 
 function select(node) {
@@ -368,5 +423,9 @@ function showSource(version, ranges = [], cls = "", note = "", sources = null) {
 buildProfile();
 $("runBtn").addEventListener("click", run);
 $("checkBtn").addEventListener("click", checkClaims);
+for (const id of ["oldText", "newText", "profileGrid", "claimText"]) $(id).addEventListener("input", updateReplayNotes);
+document.querySelectorAll(".reset-sample").forEach((btn) => btn.addEventListener("click", () => {
+  pickSample($("sampleSelect").value || state.sampleName).catch((e) => showError(`Could not reset the sample: ${e.message}`));
+}));
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showSource(b.dataset.v)));
 Promise.all([loadConfig(), loadSamples()]).catch((e) => showError(`Could not load the app: ${e.message}`));

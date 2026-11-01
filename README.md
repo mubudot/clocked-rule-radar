@@ -8,7 +8,7 @@ You get:
 
 - **A verified brief**: a short list of what changed, written by a model you choose. Every line goes through
   Clocked **Verify**, which checks it against both versions. Lines the sources contradict are taken out of the
-  brief and shown with the passage that disproves them.
+  brief and shown with the passage that disproves them, when Verify returns one.
 - **Changes ranked for your situation**: Clocked **Rerank** reads each change with your profile (country,
   team size, start date, repository, video length). Each change is labelled *Act on this*, *Read the section*,
   *Low impact* or *Not your case*. For example, a new Quebec exclusion is *Not your case* for an entrant in Taiwan.
@@ -17,7 +17,7 @@ You get:
 - **Key facts with source spans**: Clocked **Extract** copies the deadline, prizes, team limit, video limit and
   repository rule from each version, word for word. Click a fact to see where it sits in the source text.
 - **A rumour checker**: paste what someone said on Discord ("the deadline was extended") and Verify answers
-  *supported*, *contradicted* or *not stated*, quoting the passage it used. Up to 20 claims at a time,
+  *supported*, *contradicted* or *not stated*. It quotes the passage it used, when it returns one. Up to 20 claims at a time,
   one Verify request each.
 
 Who it is for: hackathon entrants, and anyone else who has to follow rules that change, such as grant
@@ -47,6 +47,36 @@ python -m rule_radar analyze samples/northwind_v1.md samples/northwind_v2.md \
 python -m rule_radar check samples/northwind_v1.md samples/northwind_v2.md \
        "The total prize pool grew to \$12,000."
 ```
+
+## Two-minute judge walkthrough
+
+1. Start `python3 -m rule_radar serve` and open the address it prints. Leave the default Northwind sample
+   and Taiwan solo profile as loaded, then click **Scan for changes**. The banner says **Action needed: Yes**
+   and **5 Clocked calls · 44 credits**. Pipeline shows Compare, Extract, Rerank and Verify outcomes.
+2. In **Verified brief**, find “Demo video limit shortened from five minutes to three minutes.” It has a
+   **?** badge and **70%** support; the other seven lines have **✓** badges. The badge explains the 80% threshold.
+3. Under **Changes, ranked for you**, click **Wording only**. The one result rewords “Harassment of any
+   participant leads to disqualification.” as “Any participant who harasses another participant will be disqualified.”
+4. Click **Not your case**. The Quebec exclusion appears here because the loaded entrant lives in Taiwan;
+   it is left out of the brief.
+5. Under **Heard a rumour? Check it**, click the chip “The total prize pool grew to $12,000.”, then
+   **Check claims**. It says **Contradicted by the rules**, quoting “The total prize pool is $10,000.” (before).
+6. In **Key facts**, click the **Submission deadline** value. **Source** switches to **Now** and highlights
+   “November 14, 2026 at 11:59 p.m. Pacific Time”.
+
+Replay only has recordings for the bundled sample **as loaded: rules text, profile and the four rumour
+chips**. Any edit makes the affected Clocked stages fail visibly, by design; the app still lets you run.
+Use **Reset sample** to restore the inputs. Live mode needs a `CLOCKED_API_KEY` to analyse your own text.
+The CLI `analyze` exit code **3** means **“changes concern you”**: it is a successful run.
+
+The safety paths use synthetic responses (with replay fallbacks), without live calls:
+
+- Pulled line repaired and re-verified:
+  [`tests/test_pipeline.py::test_rejected_line_is_repaired_and_reverified`](tests/test_pipeline.py).
+- Missing Rerank judgment keeps the answer Unknown:
+  [`tests/test_review_round2.py::test_missing_rerank_results_are_not_an_all_clear`](tests/test_review_round2.py).
+- Failed stages retain a report and fallbacks:
+  [`tests/test_pipeline.py::test_every_stage_failing_still_returns_a_report`](tests/test_pipeline.py).
 
 ## Live mode (your own text)
 
@@ -97,18 +127,21 @@ python -m rule_radar watch https://example.com/hackathon/rules --profile me.json
 | --- | --- | --- | --- |
 | **Compare** `/compare` | Verify · Compare · Rerank | both versions, `evidence: "all"`, rules telling it that a changed date/amount/limit/condition counts as a conflict and a new version label does not | Its conflict and duplicate passages, with offsets in each version, are mapped onto the locally aligned clauses. An edit with a conflict becomes **material** and is ranked. An edit is **wording only**, and hidden by default, only when Compare's restated passages cover every changed part on both sides. In the sample, the reworded code-of-conduct sentence is wording only. An edit Compare says nothing about is **unconfirmed** and labelled "read it yourself". An added clause that conflicts with an old one is linked to it. |
 | **Rerank** `/rerank` | Verify · Compare · Rerank | each non-cosmetic change as a passage ("Before: … Now: …"), the entrant profile as `context`, and one `questions` entry | `action` and `reason` set the label and the order. `use` → *Act on this*, `expand` → *Read the section*, `skip/different_case` → *Not your case*, `skip/unrelated` → *Low impact*. *Not your case* changes never reach the brief, and neither do the Extract facts inside them. The Decide answer `action_needed` drives the "Action needed: Yes/No" banner. |
-| **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with the quoted evidence. `not_a_claim` (nothing factual to check) is also kept out of the brief and labelled as such. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
+| **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with quoted evidence when Verify returns a passage. `not_a_claim` (nothing factual to check) is also kept out of the brief and labelled as such. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
 | **Extract** `/extract` | Decide · Extract · Fill | each version, 11 named fields (deadline, building period, winners date, prize pool, top prize, team size, video limit, repository rule, existing-work rule, excluded residents, payout) | Verbatim values and offsets feed the key-facts table and the source highlighter. They are also the facts the model is allowed to use. A `null` value is shown as *not stated*, never guessed. A read below 0.6 confidence is flagged *low confidence, check*. |
 
-A typical scan of the sample takes 5 Clocked calls and about 45 credits. The pipeline view in the UI shows
-the credits and model time of every stage, read from the `X-Clocked-*` response headers.
+The bundled sample replay takes 5 Clocked calls and 44 recorded credits. The pipeline view in the UI shows
+the credits and model time of every stage, read from the `X-Clocked-*` response headers, plus outcome counts
+computed from the results. Extract counts found and not-stated fields per version; low confidence is a
+subset of found fields. Verify counts its initial judgments; any later rewrite is reported under Repair.
 
 ## Uncertain results, missing information and failed requests
 
 - **Uncertainty is shown, not hidden.** Verify scores below 0.8 get a **?** badge. Compare silence becomes
   *unconfirmed*. Extract reads below 0.6 are flagged. Rerank relevance is drawn as a bar on each change.
 - **Missing information**: an Extract `null` shows as *not stated*. Verify's `not_stated` pulls a line from
-  the brief. A missing Verify evidence passage is never invented.
+  the brief. A missing Verify evidence passage is never invented: clicking a brief line without one shows
+  its linked rule change with an explicit note, or says no passage was returned if there is no linked change.
 - **Failed requests**: every request has one `Idempotency-Key`, which is reused on every retry. 429, 5xx and
   network errors are retried with bounded exponential backoff and jitter (4 attempts). A 409 that follows an
   unknown outcome (timeout or 5xx) means the first attempt is still running, so it is retried with the same
@@ -154,10 +187,11 @@ rule_radar/
   pipeline.py          orchestration, per-stage status and fallbacks
   server.py, web/      stdlib HTTP server + vanilla JS UI (strict CSP, no external assets)
   snapshots.py         `watch` command: fetch → text snapshot → analyze
-tests/                 119 tests (pytest); no network needed
+tests/                 131 tests (pytest); no network needed
 ```
 
 Run the tests with `pip install pytest && python -m pytest -q`.
+The pure JavaScript helper tests use Node if installed, otherwise they are skipped; the app needs only Python.
 
 ## Limitations
 
@@ -165,13 +199,14 @@ Run the tests with `pip install pytest && python -m pytest -q`.
   and its scores vary between runs. In live runs it has rejected a true template line ("Demo video limit
   changed from no longer than five minutes to no longer than three minutes"). The template now states both
   sides explicitly ("the old rules said …; the new rules say …"), which Verify judges more reliably, and
-  pulled lines stay visible with their evidence, are never silently deleted, and get one model rewrite
+  pulled lines stay visible with their evidence when returned, are never silently deleted, and get one model rewrite
   when a model is configured.
 - A plain numbered line such as "1. Teams" or "1. Videos under five minutes" both names its section and is
   kept as a clause, because no rule can tell a title from a short rule reliably. A renamed title therefore
   shows up as a change to read; a changed short rule is never lost.
 - The watcher reads static HTML. Rules pages that are rendered by JavaScript need their text pasted in.
-- Replay mode only covers the bundled sample. Any other text needs a key.
+- Replay mode only covers the bundled sample's text, profile and four rumour chips as loaded. Edits make
+  the affected Clocked stages fail visibly, by design. Analysing your own text in live mode needs a key.
 
 ## Credits and data
 

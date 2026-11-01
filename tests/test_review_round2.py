@@ -198,6 +198,9 @@ def test_successful_calls_count_even_when_their_stage_fails():
     rep = analyze(OLD, NEW, client=c, llm=None)
     ex = rep["stages"]["extract"]
     assert ex["status"] == "failed" and ex["usage"]["calls"] == 1 and ex["usage"]["failed_calls"] == 1
+    # The successful version keeps its outcomes; the failed version is unavailable, not "not stated".
+    assert list(ex["outcomes"].values()).count(None) == 1
+    assert {"found": 0, "not_stated": 11, "low_confidence": 0} in ex["outcomes"].values()
     assert rep["usage"]["credits"] == sum(1.0 for _ in range(rep["usage"]["calls"]))
 
 
