@@ -36,7 +36,7 @@ python -m rule_radar serve          # open http://127.0.0.1:8765/  and click "Sc
 ```
 
 Without a `CLOCKED_API_KEY`, the app runs in **replay mode**. It serves real Clocked responses that were
-recorded for the bundled sample (`fixtures/replay/`), including the Claude-written brief. So the whole flow
+recorded for the two bundled samples (`fixtures/replay/`), including the Claude-written brief. So the whole flow
 works offline: scan, verified brief, ranking, key facts, and the four rumour chips.
 
 Terminal version:
@@ -63,8 +63,13 @@ python -m rule_radar check samples/northwind_v1.md samples/northwind_v2.md \
    **Check claims**. It says **Contradicted by the rules**, quoting “The total prize pool is $10,000.” (before).
 6. In **Key facts**, click the **Submission deadline** value. **Source** switches to **Now** and highlights
    “November 14, 2026 at 11:59 p.m. Pacific Time”.
+7. Switch **Sample** to “Same Northwind rules, a five-person team in Quebec” and scan again. Only the
+   profile changed (country and team size), so Compare and Extract are the same, but Rerank moves the
+   Quebec exclusion from *Not your case* to *Act on this*, and the new four-person team limit becomes
+   *Act on this* too (12 *Act on this*, 0 *Not your case*). Both now appear in the brief, the team line with a
+   **?** badge at 63%; the Taiwan entrant's brief mentions neither.
 
-Replay only has recordings for the bundled sample **as loaded: rules text, profile and the four rumour
+Replay only has recordings for the bundled samples **as loaded: rules text, profile and the four rumour
 chips**. Any edit makes the affected Clocked stages fail visibly, by design; the app still lets you run.
 Use **Reset sample** to restore the inputs. Live mode needs a `CLOCKED_API_KEY` to analyse your own text.
 The CLI `analyze` exit code **3** means **“changes concern you”**: it is a successful run.
@@ -130,7 +135,7 @@ python -m rule_radar watch https://example.com/hackathon/rules --profile me.json
 | **Verify** `/grounding` | Verify · Compare · Rerank | every brief line as an explicit claim, with old and new as the only sources | `supported` ≥ 0.8 → published with ✓. Supported but lower → published with a **?** badge. Contradicted or not stated → **removed from the brief** and shown under "Pulled by Verify" with quoted evidence when Verify returns a passage. `not_a_claim` (nothing factual to check) is also kept out of the brief and labelled as such. The model then gets one chance to rewrite each pulled line, and the rewrite is published only if Verify accepts it. The rumour checker is Verify alone, one request per claim. |
 | **Extract** `/extract` | Decide · Extract · Fill | each version, 11 named fields (deadline, building period, winners date, prize pool, top prize, team size, video limit, repository rule, existing-work rule, excluded residents, payout) | Verbatim values and offsets feed the key-facts table and the source highlighter. They are also the facts the model is allowed to use. A `null` value is shown as *not stated*, never guessed. A read below 0.6 confidence is flagged *low confidence, check*. |
 
-The bundled sample replay takes 5 Clocked calls and 44 recorded credits. The pipeline view in the UI shows
+Each bundled sample replay takes 5 Clocked calls (44 and 48 recorded credits). The pipeline view in the UI shows
 the credits and model time of every stage, read from the `X-Clocked-*` response headers, plus outcome counts
 computed from the results. Extract counts found and not-stated fields per version; low confidence is a
 subset of found fields. Verify counts its initial judgments; any later rewrite is reported under Repair.
@@ -187,7 +192,7 @@ rule_radar/
   pipeline.py          orchestration, per-stage status and fallbacks
   server.py, web/      stdlib HTTP server + vanilla JS UI (strict CSP, no external assets)
   snapshots.py         `watch` command: fetch → text snapshot → analyze
-tests/                 131 tests (pytest); no network needed
+tests/                 136 tests (pytest); no network needed
 ```
 
 Run the tests with `pip install pytest && python -m pytest -q`.
@@ -205,7 +210,7 @@ The pure JavaScript helper tests use Node if installed, otherwise they are skipp
   kept as a clause, because no rule can tell a title from a short rule reliably. A renamed title therefore
   shows up as a change to read; a changed short rule is never lost.
 - The watcher reads static HTML. Rules pages that are rendered by JavaScript need their text pasted in.
-- Replay mode only covers the bundled sample's text, profile and four rumour chips as loaded. Edits make
+- Replay mode only covers the bundled samples' text, profile and four rumour chips as loaded. Edits make
   the affected Clocked stages fail visibly, by design. Analysing your own text in live mode needs a key.
 
 ## Credits and data

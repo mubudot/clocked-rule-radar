@@ -120,6 +120,46 @@ def test_brief_without_json_is_an_error():
         summarize.write_brief([], [], L())
 
 
+_CHANGE = [{"id": "new:1.1", "materiality": "material", "status": "edited", "section": "S",
+            "old": {"text": "a"}, "new": {"text": "b"}, "rank": {"label": "act"}}]
+
+
+def _llm(reply):
+    class L:
+        name = "l"
+        def complete(self, s, u):
+            return reply
+    return L()
+
+
+def test_brief_quoting_the_prompt_shape_then_answering_uses_the_answer():
+    # Seen live: a model thinks aloud, quotes the shape from the prompt, then answers.
+    reply = ('Reply with JSON in the shape {"lines": [{"text": "...", "change_ids": ["new:2.1"]}]}.\n'
+             'Here it is:\n{"lines": [{"text": "Deadline moved.", "change_ids": ["new:1.1"]}]}')
+    lines, _ = summarize.write_brief(_CHANGE, [], _llm(reply))
+    assert lines == [{"text": "Deadline moved.", "change_ids": ["new:1.1"]}]
+
+
+@pytest.mark.parametrize("reply", [
+    # truncated thinking that only ever quotes the shape: the placeholder line is never published
+    'The shape is {"lines": [{"text": "...", "change_ids": ["new:2.1"]}]} and the changes are',
+    '{"lines": [{"text": "\u2026"}, {"text": " . . "}]}',
+])
+def test_brief_with_only_placeholder_lines_is_an_error(reply):
+    with pytest.raises(LLMError) as e:
+        summarize.write_brief(_CHANGE, [], _llm(reply))
+    assert e.value.retryable
+
+
+def test_repair_ignores_a_quoted_placeholder():
+    reply = 'Shape: {"lines": [{"index": 0, "text": "..."}]} Answer: {"lines": [{"index": 0, "text": "Fixed."}]}'
+    assert summarize.repair([{"index": 0, "text": "x", "verdict": "not_stated", "evidence": None}],
+                            _llm(reply)) == {0: "Fixed."}
+    only_shape = 'Shape: {"lines": [{"index": 0, "text": "..."}]} and then'
+    assert summarize.repair([{"index": 0, "text": "x", "verdict": "not_stated", "evidence": None}],
+                            _llm(only_shape)) == {}
+
+
 def test_offline_brief_skips_other_cases():
     changes = [{"id": "new:2.1", "status": "added", "materiality": "new", "section": "Award",
                 "new": {"text": "A $500 award."}, "rank": {"label": "not_your_case"}},

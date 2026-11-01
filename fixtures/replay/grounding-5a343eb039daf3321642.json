@@ -1,0 +1,204 @@
+{
+ "endpoint": "grounding",
+ "usage": {
+  "endpoint": "grounding",
+  "credits": 9.0,
+  "cost_usd": 0.001793,
+  "model_ms": 223.7,
+  "attempts": 1,
+  "replayed": false,
+  "ledger_replay": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "grounded": 0.8707,
+  "ungrounded": 0.1293,
+  "verdict": "grounded",
+  "threshold": 0.5,
+  "instructions_used": "custom",
+  "documents": [
+   {
+    "id": "new",
+    "share": 0.9811,
+    "share_of_answer": 0.8542,
+    "claims": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": "old",
+    "share": 0.0189,
+    "share_of_answer": 0.0165,
+    "claims": []
+   }
+  ],
+  "claims": [
+   {
+    "claim": "Deadline moved up: submit by November 14, 2026 at 11:59 p.m. Pacific Time, not November 20.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1348,
+    "supported": 0.8721,
+    "contradicted": 0.0453,
+    "not_stated": 0.0566,
+    "not_a_claim": 0.0259,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0252,
+     "new": 0.9748
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Repository must now be public with full commit history; private repos are no longer accepted.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1378,
+    "supported": 0.9839,
+    "contradicted": 0.0088,
+    "not_stated": 0.0033,
+    "not_a_claim": 0.0041,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0024,
+     "new": 0.9976
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Only projects started during the building period are eligible; earlier projects are out, even with substantial changes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1763,
+    "supported": 0.9916,
+    "contradicted": 0.0044,
+    "not_stated": 0.002,
+    "not_a_claim": 0.002,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0016,
+     "new": 0.9984
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Quebec residents and residents of US-sanctioned countries are now excluded.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1111,
+    "supported": 0.9898,
+    "contradicted": 0.0049,
+    "not_stated": 0.0023,
+    "not_a_claim": 0.003,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0018,
+     "new": 0.9982
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "The sprint is open to individuals aged 18 or older in any country where the contest is lawful, except residents of Quebec and of countries under US sanctions.",
+     "start": 280,
+     "end": 438,
+     "confidence": 0.982
+    }
+   },
+   {
+    "claim": "Team size cap reduced from six to four people.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0681,
+    "supported": 0.6271,
+    "contradicted": 0.2148,
+    "not_stated": 0.0567,
+    "not_a_claim": 0.1014,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0549,
+     "new": 0.9451
+    },
+    "source": "new",
+    "evidence": {
+     "document": "new",
+     "quote": "You may enter alone or in a team of up to four people.",
+     "start": 524,
+     "end": 578,
+     "confidence": 0.983
+    }
+   },
+   {
+    "claim": "Demo video limit shortened from five minutes to three minutes.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.0919,
+    "supported": 0.6954,
+    "contradicted": 0.1191,
+    "not_stated": 0.0913,
+    "not_a_claim": 0.0942,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0614,
+     "new": 0.9386
+    },
+    "source": "new",
+    "evidence": {
+     "document": "old",
+     "quote": "a demo video no longer than five minutes.",
+     "start": 658,
+     "end": 699,
+     "confidence": 0.873
+    }
+   },
+   {
+    "claim": "Prizes paid through Wise (was bank transfer); winners must submit a tax form before payment.",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1363,
+    "supported": 0.9706,
+    "contradicted": 0.0159,
+    "not_stated": 0.0054,
+    "not_a_claim": 0.0081,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0052,
+     "new": 0.9948
+    },
+    "source": "new"
+   },
+   {
+    "claim": "Prize amounts changed: 1st $6,000 (was $5,000), 2nd $2,500 (was $3,000), 3rd $1,500 (was $2,000).",
+    "kind": "claim",
+    "counted": true,
+    "weight": 0.1437,
+    "supported": 0.6534,
+    "contradicted": 0.2398,
+    "not_stated": 0.0656,
+    "not_a_claim": 0.0411,
+    "verdict": "supported",
+    "sources": {
+     "old": 0.0613,
+     "new": 0.9387
+    },
+    "source": "new"
+   }
+  ],
+  "unsupported_claims": [],
+  "not_claims": [],
+  "weakest_claim": {
+   "index": 4,
+   "supported": 0.6271
+  },
+  "timing": {
+   "read_ms": 234,
+   "total_ms": 236
+  }
+ }
+}

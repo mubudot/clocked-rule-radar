@@ -1,0 +1,235 @@
+{
+ "endpoint": "rerank",
+ "usage": {
+  "endpoint": "rerank",
+  "credits": 8.0,
+  "cost_usd": 0.001594,
+  "model_ms": 192.1,
+  "attempts": 1,
+  "replayed": false,
+  "ledger_replay": false
+ },
+ "response": {
+  "model": "clocked-1.0",
+  "results": [
+   {
+    "index": 7,
+    "id": "new:5.2",
+    "action": "use",
+    "relevance_score": 0.9939,
+    "document_score": 0.9956,
+    "levels": {
+     "answers": 0.9939,
+     "elsewhere": 0.0017,
+     "different_case": 0.0017,
+     "unrelated": 0.0027
+    }
+   },
+   {
+    "index": 1,
+    "id": "new:2.2",
+    "action": "use",
+    "relevance_score": 0.9924,
+    "document_score": 0.9944,
+    "levels": {
+     "answers": 0.9924,
+     "elsewhere": 0.002,
+     "different_case": 0.002,
+     "unrelated": 0.0036
+    }
+   },
+   {
+    "index": 5,
+    "id": "new:5.1",
+    "action": "use",
+    "relevance_score": 0.9914,
+    "document_score": 0.994,
+    "levels": {
+     "answers": 0.9914,
+     "elsewhere": 0.0026,
+     "different_case": 0.0025,
+     "unrelated": 0.0035
+    }
+   },
+   {
+    "index": 9,
+    "id": "new:6.3",
+    "action": "use",
+    "relevance_score": 0.9863,
+    "document_score": 0.9911,
+    "levels": {
+     "answers": 0.9863,
+     "elsewhere": 0.0048,
+     "different_case": 0.0057,
+     "unrelated": 0.0032
+    }
+   },
+   {
+    "index": 8,
+    "id": "new:6.2",
+    "action": "use",
+    "relevance_score": 0.9847,
+    "document_score": 0.989,
+    "levels": {
+     "answers": 0.9847,
+     "elsewhere": 0.0043,
+     "different_case": 0.0055,
+     "unrelated": 0.0055
+    }
+   },
+   {
+    "index": 0,
+    "id": "new:2.1",
+    "action": "use",
+    "relevance_score": 0.9835,
+    "document_score": 0.9869,
+    "levels": {
+     "answers": 0.9835,
+     "elsewhere": 0.0035,
+     "different_case": 0.0053,
+     "unrelated": 0.0078
+    }
+   },
+   {
+    "index": 4,
+    "id": "new:4.1",
+    "action": "use",
+    "relevance_score": 0.9797,
+    "document_score": 0.9843,
+    "levels": {
+     "answers": 0.9797,
+     "elsewhere": 0.0045,
+     "different_case": 0.0103,
+     "unrelated": 0.0054
+    }
+   },
+   {
+    "index": 10,
+    "id": "new:8.1",
+    "action": "use",
+    "relevance_score": 0.9629,
+    "document_score": 0.9709,
+    "levels": {
+     "answers": 0.9629,
+     "elsewhere": 0.008,
+     "different_case": 0.0164,
+     "unrelated": 0.0128
+    }
+   },
+   {
+    "index": 11,
+    "id": "new:8.2",
+    "action": "use",
+    "relevance_score": 0.9544,
+    "document_score": 0.9618,
+    "levels": {
+     "answers": 0.9544,
+     "elsewhere": 0.0075,
+     "different_case": 0.0226,
+     "unrelated": 0.0155
+    }
+   },
+   {
+    "index": 3,
+    "id": "new:3.1",
+    "action": "use",
+    "relevance_score": 0.9524,
+    "document_score": 0.959,
+    "levels": {
+     "answers": 0.9524,
+     "elsewhere": 0.0065,
+     "different_case": 0.0307,
+     "unrelated": 0.0103
+    }
+   },
+   {
+    "index": 6,
+    "id": "old:5.2",
+    "action": "use",
+    "relevance_score": 0.8271,
+    "document_score": 0.8409,
+    "levels": {
+     "answers": 0.8271,
+     "elsewhere": 0.0138,
+     "different_case": 0.1002,
+     "unrelated": 0.0589
+    }
+   },
+   {
+    "index": 2,
+    "id": "new:2.3",
+    "action": "use",
+    "relevance_score": 0.6991,
+    "document_score": 0.7353,
+    "levels": {
+     "answers": 0.6991,
+     "elsewhere": 0.0362,
+     "different_case": 0.0495,
+     "unrelated": 0.2152
+    }
+   },
+   {
+    "index": 12,
+    "id": "new:10.1",
+    "action": "skip",
+    "reason": "unrelated",
+    "relevance_score": 0.4517,
+    "document_score": 0.4729,
+    "levels": {
+     "answers": 0.4517,
+     "elsewhere": 0.0211,
+     "different_case": 0.0271,
+     "unrelated": 0.5
+    }
+   },
+   {
+    "index": 13,
+    "id": "new:10.2",
+    "action": "skip",
+    "reason": "unrelated",
+    "relevance_score": 0.0299,
+    "document_score": 0.038,
+    "levels": {
+     "answers": 0.0299,
+     "elsewhere": 0.0082,
+     "different_case": 0.0225,
+     "unrelated": 0.9394
+    }
+   }
+  ],
+  "answers": {
+   "action_needed": {
+    "type": "noul",
+    "noul": 0.9877,
+    "decision": true,
+    "threshold": 0.7
+   }
+  },
+  "usage": {
+   "input_tokens": 2751
+  },
+  "timing": {
+   "total_ms": 213,
+   "rerank_ms": 155,
+   "questions_ms": 58,
+   "model_ms": 187,
+   "engine": {
+    "rows": 3745,
+    "branches": 14,
+    "forwards": 1,
+    "bins": 1,
+    "bucket_rows": 4096,
+    "long": 0,
+    "total_ms": 136,
+    "build_ms": 0,
+    "doc_ms": 70,
+    "forward_ms": 61,
+    "state_ms": 0,
+    "logits_ms": 4,
+    "state_chars": 0,
+    "row_buckets": "big",
+    "shared_opening_tokens": 176
+   }
+  }
+ }
+}

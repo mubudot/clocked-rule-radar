@@ -79,18 +79,38 @@ def _facts(changes: list[dict[str, Any]], fields: list[dict[str, Any]]) -> dict[
     return {"changes": rows[:24], "key_facts": table}
 
 
-def _parse_lines(text: str) -> list[dict[str, Any]]:
-    m = re.search(r"\{.*\}", text, re.S)
-    if not m:
-        raise LLMError("model reply has no JSON object", retryable=True)
+def _json_objects(text: str) -> list[Any]:
+    """Every JSON object in the reply: the whole reply if it parses, else each embedded one in order."""
     try:
-        data = json.loads(m.group(0))
+        return [json.loads(text)]
     except ValueError:
-        raise LLMError("model reply is not valid JSON", retryable=True) from None
-    lines = data.get("lines") if isinstance(data, dict) else None
-    if not isinstance(lines, list):
+        pass
+    dec, out, i = json.JSONDecoder(), [], text.find("{")
+    while i != -1:
+        try:
+            obj, end = dec.raw_decode(text, i)
+        except ValueError:
+            i = text.find("{", i + 1)
+            continue
+        out.append(obj)
+        i = text.find("{", end)
+    return out
+
+
+_PLACEHOLDER = re.compile(r"[\s.\u2026]*")
+
+
+def _parse_lines(text: str) -> list[dict[str, Any]]:
+    """The model's 'lines' list. When a reply also quotes the shape from the prompt (some models think
+    aloud first), the last object with a 'lines' list is the answer. Placeholder lines ("...") are dropped."""
+    objs = _json_objects(text)
+    if not objs:
+        raise LLMError("model reply is not valid JSON", retryable=True)
+    found = [o["lines"] for o in objs if isinstance(o, dict) and isinstance(o.get("lines"), list)]
+    if not found:
         raise LLMError("model reply has no 'lines' list", retryable=True)
-    return [ln for ln in lines if isinstance(ln, dict)]
+    return [ln for ln in found[-1] if isinstance(ln, dict)
+            and not (isinstance(ln.get("text"), str) and _PLACEHOLDER.fullmatch(ln["text"]))]
 
 
 def _clause_line(c: dict[str, Any]) -> str:

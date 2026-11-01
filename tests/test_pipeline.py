@@ -193,3 +193,26 @@ def test_partial_verify_outcomes_keep_status_and_usage(v1, v2, profile):
     assert stage["usage"]["calls"] == 1 and stage["usage"]["credits"] == 1
     assert rep["brief"]["partial"] and not rep["assessment"]["complete"]
     assert [ln["status"] for ln in rep["brief"]["lines"]] == ["verified", "check", "unverified"]
+
+
+def test_second_recorded_profile_changes_what_matters(v1, v2, profile):
+    """Same rules, a five-person team in Quebec: Rerank's judgments move, and the brief follows them."""
+    quebec = json.loads((REPLAY.parent.parent / "samples" / "northwind_quebec.sample.json").read_text("utf-8"))
+    assert {k for k in quebec["profile"] if quebec["profile"][k] != profile[k]} == {"country_of_residence", "team_size"}
+    solo = analyze(v1, v2, client=ReplayClient(REPLAY), llm=ReplayLLM(REPLAY), profile=profile)
+    rep = analyze(v1, v2, client=ReplayClient(REPLAY), llm=ReplayLLM(REPLAY), profile=quebec["profile"])
+    assert all(s["status"] in ("ok", "skipped") for s in rep["stages"].values()), rep["stages"]
+    assert rep["usage"]["calls"] == 5 and rep["assessment"]["complete"] is True
+
+    def label(r, needle):
+        return next((c.get("rank") or {}).get("label") for c in r["changes"]
+                    if needle in ((c["new"] or c["old"])["text"]))
+    assert label(solo, "except residents of Quebec") == "not_your_case"
+    assert label(rep, "except residents of Quebec") == "act"
+    assert label(solo, "team of up to four") != "act"
+    assert label(rep, "team of up to four") == "act"
+    assert rep["stages"]["rerank"]["outcomes"]["not_your_case"] == 0
+    texts = [ln["text"] for ln in rep["brief"]["lines"]]
+    assert any("Quebec" in t for t in texts) and any("four" in t for t in texts)
+    assert not any("Quebec" in ln["text"] for ln in solo["brief"]["lines"])
+    assert rep["brief"]["source"].startswith("replay:anthropic") and rep["brief"]["rejected"] == []
