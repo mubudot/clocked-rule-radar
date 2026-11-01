@@ -2,7 +2,7 @@ import { el, clear, highlighted, wordDiff, pct, replayDifferences } from "./dom.
 
 const $ = (id) => document.getElementById(id);
 const state = { report: null, version: "new", filter: "all", sample: null, selected: null, sources: null,
-  mode: null, replaySample: null, sampleName: null };
+  mode: null, replaySample: null, sampleName: null, generation: 0 };
 
 const PROFILE_FIELDS = [
   ["country_of_residence", "Country of residence", "text", "e.g. Taiwan"],
@@ -106,6 +106,7 @@ async function loadSamples() {
 
 // A report belongs to the inputs it was made from: new or reset inputs hide it and start from "All".
 function clearReport() {
+  state.generation += 1;  // a scan or claim check still in flight belongs to the old inputs: drop its answer
   state.report = null;
   state.selected = null;
   state.filter = "all";
@@ -143,8 +144,10 @@ async function run() {
   showError("");
   btn.disabled = true;
   clear(btn).append(el("span", { class: "spinner" }), "Scanning…");
+  const generation = state.generation;
   try {
     const rep = await api("/api/analyze", { old: $("oldText").value, new: $("newText").value, profile: readProfile() });
+    if (generation !== state.generation) return;
     state.report = rep;
     state.selected = null;
     state.sources = rep.versions;
@@ -154,7 +157,7 @@ async function run() {
     $("results").hidden = false;
     $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
-    showError(`Scan failed: ${e.message}`);
+    if (generation === state.generation) showError(`Scan failed: ${e.message}`);
   } finally {
     btn.disabled = false;
     clear(btn).append("Scan for changes");
@@ -168,12 +171,14 @@ async function checkClaims() {
   if (!claims.length) return;
   const btn = $("checkBtn");
   btn.disabled = true;
+  const generation = state.generation;
   try {
     const sources = { old: $("oldText").value, new: $("newText").value };  // evidence offsets refer to these
     const out = await api("/api/check", { ...sources, claims });
+    if (generation !== state.generation) return;
     for (const row of out.claims) list.append(claimItem(row, row.claim, true, sources));
   } catch (e) {
-    list.append(el("li", { class: "empty" }, `Check failed: ${e.message}`));
+    if (generation === state.generation) list.append(el("li", { class: "empty" }, `Check failed: ${e.message}`));
   } finally {
     btn.disabled = false;
   }
